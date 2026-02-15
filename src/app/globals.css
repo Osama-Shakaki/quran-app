@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+@theme {
+  --font-amiri: 'Amiri', serif;
+  --font-cairo: 'Cairo', sans-serif;
+  --font-reem-kufi: 'Reem Kufi', sans-serif;
+
+  --color-sage-green: #B2C8BA;
+  --color-sage-light: #E8F3E8;
+  --color-soft-peach: #FFDAB9;
+  --color-peach-light: #FFF0E6;
+  --color-forest-green: #1A3C34;
+  --color-off-white: #FDFBF7;
+
+  --backdrop-blur-md: blur(12px);
+  --shadow-glass: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-sm;
+  }
+
+  .glass-dark {
+    @apply bg-zinc-900/70 backdrop-blur-md border border-zinc-700/20 shadow-sm;
+  }
+
+  .text-glow {
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  }
+}
+
+/* Base Styles */
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  color: var(--foreground);
+  /* background: var(--background); */
+  /* Using a warm, paper-like background for the "heritage" feel by default, can be overridden by dark mode or specific pages */
+  background-color: #fdfbf7;
+  font-family: var(--font-cairo), sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Utilities for RTL Flipping */
+[dir="rtl"] .flip-rtl {
+  transform: scaleX(-1);
+}
+
+/* Custom Scrollbar for a cleaner look */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
