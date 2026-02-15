@@ -24,8 +24,16 @@ const reemKufi = Reem_Kufi({
 });
 
 export const metadata: Metadata = {
-  title: "Digital Heritage E-reader",
-  description: "A digital viewer for The Holy Quran and Thoughts & Wisdom.",
+  title: "المكتبة التراثية الرقمية",
+  description: "عارض تراثي للمصحف الشريف وكتب الخواطر",
+  manifest: '/manifest.json',
+  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover',
+  themeColor: '#fdfbf7',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Heritage Reader'
+  }
 };
 
 export default function RootLayout({
@@ -38,6 +46,21 @@ export default function RootLayout({
       <body
         className={`${cairo.variable} ${amiri.variable} ${reemKufi.variable} antialiased bg-[#fdfbf7] text-slate-900`}
       >
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+                    if ('serviceWorker' in navigator) {
+                        window.addEventListener('load', function() {
+                            navigator.serviceWorker.register('/sw.js').then(function(registration) {
+                                console.log('ServiceWorker registration successful');
+                            }, function(err) {
+                                console.log('ServiceWorker registration failed: ', err);
+                            });
+                        });
+                    }
+                `
+          }}
+        />
         {children}
       </body>
     </html>

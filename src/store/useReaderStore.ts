@@ -14,7 +14,7 @@ interface ReaderState {
     currentPage: number; // The active page being viewed
     quranPage: number;   // Last viewed page in Quran
     thoughtsPage: number; // Last viewed page in Thoughts
-    bookmarks: string[]; // List of page IDs
+    bookmarks: string[]; // List of bookmarked page IDs
     notes: Record<string, Note>; // Map pageId to Note
 
     // Actions
@@ -23,6 +23,17 @@ interface ReaderState {
     toggleBookmark: (pageId: string) => void;
     saveNote: (pageId: string, content: string) => void;
     deleteNote: (pageId: string) => void;
+
+    // UI State
+    isUIVisible: boolean;
+    toggleUI: () => void;
+    setUIVisible: (visible: boolean) => void;
+
+    // View State
+    rotation: number;
+    rotatePage: () => void;
+    isTwoPageView: boolean;
+    setTwoPageView: (isTwoPage: boolean) => void;
 }
 
 export const useReaderStore = create<ReaderState>()(
@@ -30,15 +41,16 @@ export const useReaderStore = create<ReaderState>()(
         (set) => ({
             currentBook: 'quran',
             currentPage: 1, // This will be dynamic based on currentBook
-            quranPage: 1,
+            quranPage: 5, // Start at Al-Fatiha (File 5)
             thoughtsPage: 1,
-            bookmarks: [],
+            bookmarks: [], // Initialize as empty string array
             notes: {},
 
             setBook: (book) => set((state) => ({
                 currentBook: book,
                 // When switching books, restore the page for that book
-                currentPage: book === 'quran' ? state.quranPage : state.thoughtsPage
+                currentPage: book === 'quran' ? state.quranPage : state.thoughtsPage,
+                rotation: 0 // Reset rotation when switching books
             })),
 
             setPage: (page) => set((state) => {
@@ -51,14 +63,11 @@ export const useReaderStore = create<ReaderState>()(
                 return updates;
             }),
 
-            toggleBookmark: (pageId) => set((state) => {
-                const isBookmarked = state.bookmarks.includes(pageId);
-                return {
-                    bookmarks: isBookmarked
-                        ? state.bookmarks.filter((id) => id !== pageId)
-                        : [...state.bookmarks, pageId],
-                };
-            }),
+            toggleBookmark: (pageId) => set((state) => ({
+                bookmarks: state.bookmarks.includes(pageId)
+                    ? state.bookmarks.filter((id) => id !== pageId)
+                    : [...state.bookmarks, pageId],
+            })),
 
             saveNote: (pageId, content) => set((state) => ({
                 notes: {
@@ -68,13 +77,22 @@ export const useReaderStore = create<ReaderState>()(
             })),
 
             deleteNote: (pageId) => set((state) => {
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 const { [pageId]: _, ...remainingNotes } = state.notes;
                 return { notes: remainingNotes };
             }),
+
+            isUIVisible: true,
+            toggleUI: () => set((state) => ({ isUIVisible: !state.isUIVisible })),
+            setUIVisible: (visible) => set({ isUIVisible: visible }),
+
+            rotation: 0,
+            rotatePage: () => set((state) => ({ rotation: (state.rotation + 90) % 360 })),
+
+            isTwoPageView: false,
+            setTwoPageView: (isTwoPage) => set({ isTwoPageView: isTwoPage }),
         }),
         {
-            name: 'heritage-reader-storage',
+            name: 'heritage-reader-storage', // Restored to previous key
             storage: createJSONStorage(() => localStorage),
         }
     )

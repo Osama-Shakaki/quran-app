@@ -1,160 +1,161 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useReaderStore } from '@/store/useReaderStore';
-import { QURAN_PAGES } from '@/data/quran_metadata';
-import { Bookmark, Search, Menu, FilePenLine, X, ChevronRight, ChevronLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { X, RotateCw } from 'lucide-react';
+import SpotlightSearch from './SpotlightSearch';
+import ReaderToolbar from './ReaderToolbar';
+import FloatingStatusBar from './FloatingStatusBar';
+import { QURAN_SURAHS, QURAN_PAGES } from '@/data/quran_metadata';
 
 interface NavigationOverlayProps {
     onNotesClick: () => void;
 }
 
 export default function NavigationOverlay({ onNotesClick }: NavigationOverlayProps) {
-    const [isOpen, setIsOpen] = useState(false);
-    const [showSearch, setShowSearch] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-    const { currentPage, currentBook, bookmarks, toggleBookmark, setPage } = useReaderStore();
+    // Subscribe to specific store updates to avoid unnecessary re-renders
+    const isUIVisible = useReaderStore((state) => state.isUIVisible);
+    const currentPage = useReaderStore((state) => state.currentPage);
+    const currentBook = useReaderStore((state) => state.currentBook);
+    const bookmarks = useReaderStore((state) => state.bookmarks);
+    const toggleBookmark = useReaderStore((state) => state.toggleBookmark);
+    const rotatePage = useReaderStore((state) => state.rotatePage);
+    const rotation = useReaderStore((state) => state.rotation);
 
-    const currentPageParams = currentBook === 'quran'
-        ? QURAN_PAGES.find(p => p.pageNumber === currentPage)
-        : { pageNumber: currentPage, id: `thoughts-${currentPage}` };
+    // Current page ID for bookmarking
+    const pageId = currentBook === 'quran' ? `quran-${currentPage}` : `thoughts-${currentPage}`;
+    // @ts-ignore - Temporary ignore until store is reverted
+    const isBookmarked = Array.isArray(bookmarks) && bookmarks.includes(pageId);
 
-    const isBookmarked = currentPageParams ? bookmarks.includes(currentPageParams.id) : false;
+    // Derive Surah and Juz info
+    const pageData = QURAN_PAGES.find(p => p.pageNumber === currentPage);
+    const currentSurahName = pageData?.surah || 'الفاتحة';
+    const currentJuzNum = pageData?.juz || 1;
 
-    const handlePageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const page = parseInt(e.target.value);
-        if (!isNaN(page)) setPage(page);
+    // Initial load animation variants
+    const topBarVariants = {
+        hidden: { y: -100, opacity: 0 },
+        visible: { y: 0, opacity: 1 },
+        exit: { y: -100, opacity: 0 }
     };
+
+    // Keyboard shortcut for search
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                setIsSearchOpen(true);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     return (
         <>
-            {/* Top Bar */}
-            <motion.div
-                initial={{ opacity: 0, y: -50 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="fixed top-0 left-0 right-0 z-50 p-4 bg-gradient-to-b from-black/60 to-transparent text-white flex justify-between items-center"
-            >
-                <div className="flex items-center gap-4">
-                    <button onClick={() => setIsOpen(true)} className="p-2 rounded-full hover:bg-white/10 transition-colors">
-                        <Menu className="w-6 h-6" />
-                    </button>
-                    <span className="text-xl font-amiri font-bold drop-shadow-sm">
-                        {currentBook === 'quran' ? 'القرآن الكريم' : 'خواطر وحكم'}
-                    </span>
-                </div>
 
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setShowSearch(!showSearch)}
-                        className="p-2 rounded-full hover:bg-white/10 transition-colors"
-                        title="بحث / انتقال"
-                    >
-                        <Search className="w-5 h-5" />
-                    </button>
-                    <button
-                        onClick={() => currentPageParams && toggleBookmark(currentPageParams.id)}
-                        className={`p-2 rounded-full hover:bg-white/10 transition-colors ${isBookmarked ? 'text-yellow-400' : 'text-white'}`}
-                        title={isBookmarked ? "إزالة العلامة" : "حفظ العلامة"}
-                    >
-                        <Bookmark className={`w-5 h-5 ${isBookmarked ? 'fill-current' : ''}`} />
-                    </button>
-                    <button
-                        onClick={onNotesClick}
-                        className="p-2 rounded-full hover:bg-white/10 transition-colors"
-                        title="الملاحظات"
-                    >
-                        <FilePenLine className="w-5 h-5" />
-                    </button>
-                </div>
-            </motion.div>
 
-            {/* Side Menu (Simple Implementation for now) */}
+            {/* Top Navigation Bar (Hidden in Immersive Mode) */}
+            {/* Top Navigation Bar (Always Visible) */}
+            <div className="fixed top-0 left-0 right-0 z-50 pointer-events-none">
+                <div className="w-full pointer-events-auto">
+                    <ReaderToolbar
+                        onNotes={onNotesClick}
+                        onRotate={currentBook === 'thoughts' ? rotatePage : undefined}
+                        title={currentBook === 'quran' ? "القرآن الكريم" : "خواطر وحكم"}
+                        onBookmark={() => toggleBookmark(pageId)}
+                        onSearch={() => setIsSearchOpen(true)}
+                        onMenuToggle={() => setIsMenuOpen(true)}
+                        isBookmarked={isBookmarked || false}
+                    />
+                </div>
+            </div>
+
+            {/* Side Menu Drawer */}
             <AnimatePresence>
-                {isOpen && (
+                {isMenuOpen && (
                     <>
+                        {/* Backdrop */}
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            onClick={() => setIsOpen(false)}
+                            onClick={() => setIsMenuOpen(false)}
                             className="fixed inset-0 bg-black/50 z-[60] backdrop-blur-sm"
                         />
+
+                        {/* Drawer */}
                         <motion.div
                             initial={{ x: '100%' }}
                             animate={{ x: 0 }}
                             exit={{ x: '100%' }}
                             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="fixed top-0 right-0 bottom-0 w-80 bg-off-white z-[70] shadow-2xl p-6 flex flex-col font-cairo"
+                            className="fixed top-0 right-0 bottom-0 w-80 bg-[#fdfbf7] z-[70] shadow-2xl p-6 flex flex-col font-cairo"
+                            dir="rtl"
                         >
-                            <div className="flex justify-between items-center mb-8">
-                                <h2 className="text-2xl font-amiri font-bold text-forest-green">القائمة</h2>
-                                <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-500">
+                            <div className="flex justify-between items-center mb-8 border-b border-slate-200 pb-4">
+                                <h2 className="text-2xl font-amiri font-bold text-forest-green">القائمة الرئيسية</h2>
+                                <button
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors"
+                                >
                                     <X size={24} />
                                 </button>
                             </div>
 
-                            <nav className="flex flex-col gap-4 text-slate-700">
-                                <a href="/" className="flex items-center gap-3 p-3 hover:bg-sage-light rounded-xl transition-colors">
-                                    <span className="font-bold">الرئيسية</span>
-                                </a>
-                                <a href="/quran" className="flex items-center gap-3 p-3 hover:bg-sage-light rounded-xl transition-colors">
-                                    <span className="font-bold">المصحف المفسر</span>
-                                </a>
-                                <a href="/thoughts" className="flex items-center gap-3 p-3 hover:bg-sage-light rounded-xl transition-colors">
-                                    <span className="font-bold">دفتر الخواطر</span>
-                                </a>
+                            <nav className="flex flex-col gap-2">
+                                <Link
+                                    href="/"
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className="flex items-center gap-3 p-3 hover:bg-sage-light/50 rounded-xl transition-colors text-slate-700 hover:text-forest-green"
+                                >
+                                    <span className="font-bold text-lg">الرئيسية</span>
+                                </Link>
+                                <Link
+                                    href="/quran"
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className="flex items-center gap-3 p-3 hover:bg-sage-light/50 rounded-xl transition-colors text-slate-700 hover:text-forest-green"
+                                >
+                                    <span className="font-bold text-lg">المصحف المفسر</span>
+                                </Link>
+                                <Link
+                                    href="/thoughts"
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className="flex items-center gap-3 p-3 hover:bg-sage-light/50 rounded-xl transition-colors text-slate-700 hover:text-forest-green"
+                                >
+                                    <span className="font-bold text-lg">دفتر الخواطر</span>
+                                </Link>
                             </nav>
+
+                            <div className="mt-auto pt-6 border-t border-slate-200 text-center text-slate-400 text-sm">
+                                <p>إصدار 1.0.0</p>
+                            </div>
                         </motion.div>
                     </>
                 )}
             </AnimatePresence>
 
-            {/* Search/GoTo Bar */}
+
+
+            {/* Floating Status Bar */}
             <AnimatePresence>
-                {showSearch && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="fixed top-20 left-4 right-4 z-40 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden max-w-md mx-auto border border-white/20"
-                    >
-                        <div className="p-4 flex flex-col gap-4 font-cairo" dir="rtl">
-                            <div className="flex items-center justify-between text-slate-700">
-                                <span className="text-sm font-bold">الانتقال للصفحة</span>
-                                <span className="bg-sage-light px-3 py-1 rounded-full text-forest-green font-bold font-mono">
-                                    {currentPage}
-                                </span>
-                            </div>
-                            <input
-                                type="range"
-                                min="1"
-                                max={currentBook === 'quran' ? 604 : 110}
-                                value={currentPage}
-                                onChange={handlePageChange}
-                                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-forest-green"
-                            />
-                            <div className="flex justify-between text-xs text-slate-400 font-mono">
-                                <span>1</span>
-                                <span>{currentBook === 'quran' ? 604 : 110}</span>
-                            </div>
-                        </div>
-                    </motion.div>
+                {isUIVisible && (
+                    <FloatingStatusBar
+                        onOpenSearch={() => setIsSearchOpen(true)}
+                    />
                 )}
             </AnimatePresence>
 
-            {/* Bottom info */}
-            <motion.div
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="fixed bottom-6 left-0 right-0 z-30 pointer-events-none flex justify-center"
-            >
-                <div className="bg-black/40 backdrop-blur-md px-6 py-2 rounded-full text-white text-sm font-amiri shadow-lg border border-white/10">
-                    {currentBook === 'quran' && currentPageParams && 'surah' in currentPageParams
-                        ? `${currentPageParams.surah} • صفحة ${currentPage}`
-                        : `صفحة ${currentPage}`}
-                </div>
-            </motion.div>
+            {/* Spotlight Search Modal */}
+            <SpotlightSearch
+                isOpen={isSearchOpen}
+                onClose={() => setIsSearchOpen(false)}
+            />
         </>
     );
 }

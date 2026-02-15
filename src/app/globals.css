@@ -31,23 +31,9 @@
 }
 
 /* Base Styles */
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  color: var(--foreground);
-  /* background: var(--background); */
-  /* Using a warm, paper-like background for the "heritage" feel by default, can be overridden by dark mode or specific pages */
   background-color: #fdfbf7;
+  color: #171717;
   font-family: var(--font-cairo), sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

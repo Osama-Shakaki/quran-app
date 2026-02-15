@@ -1,0 +1,22 @@
+{
+    "name": "Quran Heritage",
+    "short_name": "Quran Heritage",
+    "description": "A digital reading experience for Heritage Quran and Thoughts.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#fdfbf7",
+    "theme_color": "#fdfbf7",
+    "orientation": "any",
+    "icons": [
+        {
+            "src": "/icon.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/icon.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

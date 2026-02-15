@@ -85,15 +85,18 @@ export default function Home() {
 
                   <div className="space-y-6">
                     {/* Progress Indicator */}
+
                     <div className="bg-white/50 rounded-xl p-4 border border-white/60 backdrop-blur-sm">
                       <div className="flex justify-between items-center mb-2 text-sm">
                         <span className="text-slate-500">آخر تواجد</span>
-                        <span className="font-bold text-forest-green font-amiri">صفحة {quranPage}</span>
+                        <span className="font-bold text-forest-green font-amiri">
+                          {quranPage < 5 ? 'المقدمة' : `صفحة ${quranPage - 4}`}
+                        </span>
                       </div>
                       <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-forest-green rounded-full opacity-80"
-                          style={{ width: `${(quranPage / 604) * 100}%` }}
+                          style={{ width: `${Math.max(5, ((Math.max(0, quranPage - 4)) / 604) * 100)}%` }}
                         />
                       </div>
                     </div>

@@ -1,9 +1,11 @@
 export interface PageData {
     id: string;
-    pageNumber: number;
+    pageNumber: number; // File Index 1-608
+    quranPageNumber?: number; // Logical Page 1-604
     imageSrc: string;
     juz?: number;
     surah?: string;
+    isIntro?: boolean;
 }
 
 export interface JuzInfo {
@@ -163,34 +165,42 @@ export const quranJuzData: JuzInfo[] = [
     { id: 30, name: "الجزء الثلاثون", startPage: 582, surahs: "عم يتساءلون، النبأ إلى الناس" }
 ];
 
-export const QURAN_PAGES: PageData[] = Array.from({ length: 604 }, (_, i) => {
-    const page = i + 1;
-    // Find Juz
-    let juz = 30;
-    for (let j = 0; j < quranJuzData.length; j++) {
-        if (page >= quranJuzData[j].startPage) {
-            juz = quranJuzData[j].id;
-        } else {
-            break;
-        }
-    }
+export const QURAN_PAGES: PageData[] = Array.from({ length: 608 }, (_, i) => {
+    const fileIndex = i + 1;
+    const quranPageNum = fileIndex - 4;
+    const isIntro = quranPageNum <= 0;
 
-    // Find Surah
-    let surahName = "";
-    // Iterate in reverse to find the surah that starts before or on this page
-    for (let s = QURAN_SURAHS.length - 1; s >= 0; s--) {
-        if (QURAN_SURAHS[s].startPage <= page) {
-            surahName = QURAN_SURAHS[s].name;
-            break; // Found it
+    let juz = 0;
+    let surahName = isIntro ? "مقدمة" : "";
+
+    if (!isIntro) {
+        // Find Juz using actual Quran Page Number
+        juz = 30; // Default fallback
+        for (let j = 0; j < quranJuzData.length; j++) {
+            if (quranPageNum >= quranJuzData[j].startPage) {
+                juz = quranJuzData[j].id;
+            } else {
+                break;
+            }
+        }
+
+        // Find Surah using actual Quran Page Number
+        for (let s = QURAN_SURAHS.length - 1; s >= 0; s--) {
+            if (QURAN_SURAHS[s].startPage <= quranPageNum) {
+                surahName = QURAN_SURAHS[s].name;
+                break;
+            }
         }
     }
 
     return {
-        id: `quran-${page}`,
-        pageNumber: page,
-        imageSrc: `/images/quran/${page}.webp`,
+        id: `quran-file-${fileIndex}`,
+        pageNumber: fileIndex, // Navigation ID (1-608)
+        quranPageNumber: isIntro ? 0 : quranPageNum, // Logical Page (1-604)
+        imageSrc: `/images/quran/${fileIndex}.webp`,
         juz: juz,
         surah: surahName || "",
+        isIntro: isIntro
     };
 });
 
