@@ -35,6 +35,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://quran-faisalshakaki.vercel.app"),
   title: 'مكتبتي | التفسير والخواطر',
   description: "تطبيق تفاعلي يجمع بين تفسير القرآن الكريم ودفتر للخواطر",
   manifest: '/manifest.json',
