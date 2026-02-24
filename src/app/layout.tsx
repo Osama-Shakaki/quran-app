@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/share-logo.png",
+        url: "/share-logo.jpg",
         width: 800,
         height: 800,
       }
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "مكتبتي | التفسير والخواطر",
     description: "تطبيق تفاعلي يجمع بين تفسير القرآن الكريم ودفتر للخواطر",
-    images: ["/share-logo.png"]
+    images: ["/share-logo.jpg"]
   }
 };
 
