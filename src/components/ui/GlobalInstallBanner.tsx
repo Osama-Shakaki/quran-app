@@ -97,7 +97,7 @@ export default function GlobalInstallBanner() {
                     animate={{ y: 0, opacity: 1, scale: 1 }}
                     exit={{ y: 50, opacity: 0, scale: 0.8 }}
                     transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                    className="fixed bottom-6 left-6 md:bottom-8 md:left-8 z-[90] font-cairo flex flex-col items-start mb-[env(safe-area-inset-bottom)]"
+                    className="fixed bottom-6 left-6 md:bottom-8 md:left-8 landscape:bottom-2 landscape:left-3 z-[90] font-cairo flex flex-col items-start mb-[env(safe-area-inset-bottom)]"
                     dir="rtl"
                 >
                     <AnimatePresence>
@@ -192,7 +192,7 @@ export default function GlobalInstallBanner() {
                             ease: "easeInOut"
                         } : {}}
                         onClick={() => setIsExpanded(!isExpanded)}
-                        className={`relative flex items-center justify-center w-12 h-12 md:w-14 md:h-14 rounded-full shadow-lg border border-white/20 transition-colors z-10 ${isExpanded ? 'bg-slate-800 text-white' : 'bg-forest-green text-white hover:bg-forest-green/90'
+                        className={`relative flex items-center justify-center w-12 h-12 md:w-14 md:h-14 landscape:w-10 landscape:h-10 rounded-full shadow-lg border border-white/20 transition-colors z-10 ${isExpanded ? 'bg-slate-800 text-white' : 'bg-forest-green text-white hover:bg-forest-green/90'
                             }`}
                         aria-label="تثبيت التطبيق"
                     >

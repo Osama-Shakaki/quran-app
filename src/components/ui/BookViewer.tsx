@@ -283,9 +283,10 @@ export default function BookViewer() {
                         wheel={{ step: 0.1, smoothStep: 0.005 }}
                         pinch={{ step: 2 }}
                         panning={{
-                            disabled: !isZoomed,
+                            disabled: !isZoomed && !(isLandscapeState && !isTwoPageView),
                             wheelPanning: true,
                         }}
+                        limitToBounds={true}
                         zoomAnimation={{
                             animationType: 'easeOut',
                             animationTime: 200
