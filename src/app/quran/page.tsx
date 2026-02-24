@@ -6,8 +6,9 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { BookOpen, Grid3X3, ArrowRight, Book, ChevronLeft } from 'lucide-react';
 import { useReaderStore } from '@/store/useReaderStore';
+import Image from 'next/image';
 import BackgroundPattern from '@/components/ui/BackgroundPattern';
-import { quranJuzData, JuzInfo } from '@/data/quran_metadata';
+import { quranJuzData, JuzInfo, QURAN_PAGES } from '@/data/quran_metadata';
 import QuranIndex from '@/components/QuranIndex';
 
 
@@ -16,6 +17,7 @@ export default function QuranSelection() {
     const router = useRouter();
     const setBook = useReaderStore((state) => state.setBook);
     const setPage = useReaderStore((state) => state.setPage);
+    const currentPage = useReaderStore((state) => state.currentPage);
 
     const [view, setView] = useState<'selection' | 'juz'>('selection');
     const handleContinueReading = () => {
@@ -25,7 +27,7 @@ export default function QuranSelection() {
 
     const handleStartFullQuran = () => {
         setBook('quran');
-        setPage(1);
+        setPage(4);
         router.push('/quran/viewer');
     };
 
@@ -43,6 +45,16 @@ export default function QuranSelection() {
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute -top-20 -right-20 w-96 h-96 bg-sage-light/40 rounded-full blur-3xl mix-blend-multiply" />
                 <div className="absolute -bottom-20 -left-20 w-96 h-96 bg-sage-light/40 rounded-full blur-3xl mix-blend-multiply" />
+            </div>
+
+            {/* Preload Background Images for Instant Navigation */}
+            <div className="hidden">
+                {QURAN_PAGES.find(p => p.pageNumber === currentPage)?.imageSrc && (
+                    <Image src={QURAN_PAGES.find(p => p.pageNumber === currentPage)!.imageSrc} alt="preload-quran" width={100} height={100} priority unoptimized />
+                )}
+                {QURAN_PAGES.find(p => p.pageNumber === 4)?.imageSrc && (
+                    <Image src={QURAN_PAGES.find(p => p.pageNumber === 4)!.imageSrc} alt="preload-quran-start" width={100} height={100} priority unoptimized />
+                )}
             </div>
 
             <motion.div

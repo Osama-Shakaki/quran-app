@@ -13,26 +13,48 @@ export default function FloatingStatusBar({ onOpenSearch }: FloatingStatusBarPro
     const {
         currentBook,
         currentPage,
-        isTwoPageView
+        isTwoPageView: isTwoPageViewRaw
     } = useReaderStore();
+
+    // Force Single Page View for Thoughts book in the Status Bar as well
+    const isTwoPageView = isTwoPageViewRaw && currentBook === 'quran';
 
     const pages = currentBook === 'quran' ? QURAN_PAGES : THOUGHTS_PAGES;
     const pageData = pages.find(p => p.pageNumber === currentPage);
 
     // Two Page Logic
-    const rightPageNum = currentPage % 2 !== 0 ? currentPage : currentPage - 1;
+    const rightPageNum = currentBook === 'quran'
+        ? (currentPage % 2 === 0 ? currentPage : currentPage - 1)
+        : (currentPage % 2 !== 0 ? currentPage : currentPage - 1);
     const leftPageNum = rightPageNum + 1;
 
     const rightPageData = pages.find(p => p.pageNumber === rightPageNum);
     const leftPageData = pages.find(p => p.pageNumber === leftPageNum);
 
+    // Helper to format numbers in Arabic (Eastern) Numerals
+    const formatArNum = (num: number | undefined) => {
+        if (num === undefined) return '';
+        return Number(num).toLocaleString('ar-EG');
+    };
+
     // Helper to get Label
     const getPageLabel = () => {
         if (currentBook === 'thoughts') {
-            if (currentPage === 1) return `صفحة 1`;
-            const lower = (currentPage - 1) * 2;
-            const upper = lower + 1;
-            return `صفحة ${lower} - ${upper}`;
+            if (isTwoPageView) {
+                // If we are on the cover page (page 1) which is alone on the right
+                if (rightPageNum === 1 && !leftPageData) {
+                    return `صفحة ١`;
+                }
+                if (!rightPageData && leftPageData) {
+                    return `صفحة ${formatArNum(leftPageData.pageNumber)}`;
+                }
+                if (rightPageData && !leftPageData) {
+                    return `صفحة ${formatArNum(rightPageData.pageNumber)}`;
+                }
+                return `صفحة ${formatArNum(rightPageNum)} - ${formatArNum(leftPageNum)}`;
+            } else {
+                return `صفحة ${formatArNum(currentPage)}`;
+            }
         }
 
         // Quran Logic
@@ -41,17 +63,27 @@ export default function FloatingStatusBar({ onOpenSearch }: FloatingStatusBarPro
             const rightIsIntro = rightPageData?.isIntro;
             const leftIsIntro = leftPageData?.isIntro;
 
-            if (rightIsIntro && leftIsIntro) {
-                return "المقدمة";
+            if (rightPageData && leftPageData && rightIsIntro && leftIsIntro) {
+                if (rightPageData?.surah === leftPageData?.surah) {
+                    return rightPageData?.surah;
+                }
+                return `${rightPageData?.surah} - ${leftPageData?.surah}`;
             }
 
-            const rightLabel = rightIsIntro ? "المقدمة" : `صفحة ${rightPageData?.quranPageNumber}`;
-            const leftLabel = leftIsIntro ? "المقدمة" : `صفحة ${leftPageData?.quranPageNumber}`;
+            if (!rightPageData && leftPageData) {
+                return leftPageData.isIntro ? leftPageData.surah : `صفحة ${formatArNum(leftPageData.quranPageNumber ?? leftPageData.pageNumber)}`;
+            }
+            if (rightPageData && !leftPageData) {
+                return rightPageData.isIntro ? rightPageData.surah : `صفحة ${formatArNum(rightPageData.quranPageNumber ?? rightPageData.pageNumber)}`;
+            }
+
+            const rightLabel = rightIsIntro ? rightPageData?.surah : `صفحة ${formatArNum(rightPageData?.quranPageNumber ?? rightPageData?.pageNumber)}`;
+            const leftLabel = leftIsIntro ? leftPageData?.surah : `صفحة ${formatArNum(leftPageData?.quranPageNumber ?? leftPageData?.pageNumber)}`;
 
             return `${rightLabel} - ${leftLabel}`;
         } else {
             // Single Page
-            return pageData?.isIntro ? "المقدمة" : `صفحة ${pageData?.quranPageNumber}`;
+            return pageData?.isIntro ? pageData?.surah : `صفحة ${formatArNum(pageData?.quranPageNumber ?? pageData?.pageNumber)}`;
         }
     };
 
@@ -84,7 +116,7 @@ export default function FloatingStatusBar({ onOpenSearch }: FloatingStatusBarPro
                     <>
                         <span>{activePageData?.surah}</span>
                         <span className="w-1 h-1 bg-white/40 rounded-full" />
-                        <span>الجزء {activePageData?.juz}</span>
+                        <span>الجزء {formatArNum(activePageData?.juz)}</span>
                         <span className="w-1 h-1 bg-white/40 rounded-full" />
                     </>
                 )}

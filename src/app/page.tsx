@@ -1,10 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { BookOpen, PenTool, Play, ArrowLeft } from 'lucide-react';
+import Image from 'next/image';
+import { motion, AnimatePresence } from 'framer-motion';
+import { BookOpen, PenTool, ArrowLeft, Download, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useReaderStore } from '@/store/useReaderStore';
 import BackgroundPattern from '@/components/ui/BackgroundPattern';
+import { QURAN_PAGES, THOUGHTS_PAGES } from '@/data/quran_metadata';
+
+
+// ─── PWA Install Top Bar ────────────────────────────────────────────────────
+// Removed as per user request
+// ────────────────────────────────────────────────────────────────────────────
 
 export default function Home() {
   const { quranPage, thoughtsPage, setBook } = useReaderStore();
@@ -41,6 +49,19 @@ export default function Home() {
       <div className="fixed top-0 left-0 w-[500px] h-[500px] bg-sage-light/30 rounded-full blur-[100px] -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
       <div className="fixed bottom-0 right-0 w-[500px] h-[500px] bg-peach-light/30 rounded-full blur-[100px] translate-x-1/2 translate-y-1/2 pointer-events-none" />
 
+      {/* Preload Background Images for Instant Navigation */}
+      <div className="hidden">
+        {QURAN_PAGES.find(p => p.pageNumber === quranPage)?.imageSrc && (
+          <Image src={QURAN_PAGES.find(p => p.pageNumber === quranPage)!.imageSrc} alt="preload-quran" width={100} height={100} priority unoptimized />
+        )}
+        {QURAN_PAGES.find(p => p.pageNumber === 4)?.imageSrc && (
+          <Image src={QURAN_PAGES.find(p => p.pageNumber === 4)!.imageSrc} alt="preload-quran-start" width={100} height={100} priority unoptimized />
+        )}
+        {THOUGHTS_PAGES.find(p => p.pageNumber === thoughtsPage)?.imageSrc && (
+          <Image src={THOUGHTS_PAGES.find(p => p.pageNumber === thoughtsPage)!.imageSrc} alt="preload-thoughts" width={100} height={100} priority unoptimized />
+        )}
+      </div>
+
       <motion.div
         variants={containerVariants}
         initial="hidden"
@@ -61,6 +82,8 @@ export default function Home() {
             المصحف الشريف وصفحات الخواطر، بتجربة قراءة عصرية تحاكي الورق
           </p>
         </motion.div>
+
+
 
         {/* Cards Container */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">

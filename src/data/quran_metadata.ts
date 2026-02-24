@@ -165,17 +165,24 @@ export const quranJuzData: JuzInfo[] = [
     { id: 30, name: "الجزء الثلاثون", startPage: 582, surahs: "عم يتساءلون، النبأ إلى الناس" }
 ];
 
-export const QURAN_PAGES: PageData[] = Array.from({ length: 608 }, (_, i) => {
+export const QURAN_PAGES: PageData[] = Array.from({ length: 607 }, (_, i) => {
     const fileIndex = i + 1;
-    const quranPageNum = fileIndex - 4;
-    const isIntro = quranPageNum <= 0;
+    let quranPageNum: number | undefined = undefined;
+    let isIntro = false;
+    let juz: number | undefined = undefined;
+    let surahName = "";
 
-    let juz = 0;
-    let surahName = isIntro ? "مقدمة" : "";
-
-    if (!isIntro) {
-        // Find Juz using actual Quran Page Number
+    if (fileIndex === 1) {
+        surahName = "غلاف المصحف";
+        isIntro = true;
+    } else if (fileIndex === 2 || fileIndex === 3) {
+        surahName = "المقدمة";
+        isIntro = true;
+    } else {
+        quranPageNum = fileIndex - 3;
         juz = 30; // Default fallback
+
+        // Find Juz using actual Quran Page Number
         for (let j = 0; j < quranJuzData.length; j++) {
             if (quranPageNum >= quranJuzData[j].startPage) {
                 juz = quranJuzData[j].id;
@@ -195,20 +202,31 @@ export const QURAN_PAGES: PageData[] = Array.from({ length: 608 }, (_, i) => {
 
     return {
         id: `quran-file-${fileIndex}`,
-        pageNumber: fileIndex, // Navigation ID (1-608)
-        quranPageNumber: isIntro ? 0 : quranPageNum, // Logical Page (1-604)
-        imageSrc: `/images/quran/${fileIndex}.webp`,
+        pageNumber: fileIndex, // Navigation ID (1-607)
+        quranPageNumber: quranPageNum, // Logical Page
+        imageSrc: `/images/quran/page-${String(fileIndex).padStart(3, '0')}.webp`,
         juz: juz,
         surah: surahName || "",
         isIntro: isIntro
     };
 });
 
-export const THOUGHTS_PAGES: PageData[] = Array.from({ length: 110 }, (_, i) => {
-    const page = i + 1;
+
+export const THOUGHTS_PAGES: PageData[] = Array.from({ length: 108 }, (_, i) => {
+    const sequentialPage = i + 1;
+    // Calculate actual filename offset due to deleted files 54.webp and 101.webp
+    let filePage = sequentialPage;
+    if (sequentialPage >= 54) {
+        filePage += 1; // Skip 54
+    }
+    // We check against 100 here since if sequentialPage is 100, filePage is 101 (which is deleted)
+    if (sequentialPage >= 100) {
+        filePage += 1; // Skip 101
+    }
+
     return {
-        id: `thoughts-${page}`,
-        pageNumber: page,
-        imageSrc: `/images/thoughts/${page}.webp`,
+        id: `thoughts-${sequentialPage}`,
+        pageNumber: sequentialPage,
+        imageSrc: `/images/thoughts/${filePage}.webp`,
     };
 });

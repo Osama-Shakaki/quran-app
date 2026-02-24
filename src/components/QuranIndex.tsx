@@ -68,7 +68,7 @@ export default function QuranIndex({ onPageSelect }: QuranIndexProps) {
                                             {juz.surahs.map((surah, idx) => (
                                                 <button
                                                     key={idx}
-                                                    onClick={() => onPageSelect(surah.startPage + 4)}
+                                                    onClick={() => onPageSelect(surah.startPage + 3)}
                                                     className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-700 hover:bg-forest-green hover:text-white hover:border-forest-green transition-colors font-amiri font-bold shadow-sm"
                                                 >
                                                     سورة {surah.name}
@@ -87,7 +87,7 @@ export default function QuranIndex({ onPageSelect }: QuranIndexProps) {
                                             {Array.from({ length: (juz.endPage - juz.startPage + 1) }, (_, i) => juz.startPage + i).map((page) => (
                                                 <button
                                                     key={page}
-                                                    onClick={() => onPageSelect(page + 4)}
+                                                    onClick={() => onPageSelect(page + 3)}
                                                     className="aspect-square rounded-lg bg-slate-50 hover:bg-sage-light hover:text-forest-green text-slate-600 font-mono text-sm border border-transparent hover:border-sage-green/30 transition-all flex items-center justify-center"
                                                 >
                                                     {page}

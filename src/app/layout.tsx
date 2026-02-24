@@ -1,6 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Amiri, Cairo, Reem_Kufi } from "next/font/google";
+
 import "./globals.css";
+import GlobalInstallBanner from "@/components/ui/GlobalInstallBanner";
 
 const amiri = Amiri({
   variable: "--font-amiri",
@@ -23,12 +25,19 @@ const reemKufi = Reem_Kufi({
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  themeColor: '#fdfbf7',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+};
+
 export const metadata: Metadata = {
-  title: "المكتبة التراثية الرقمية",
+  title: 'مكتبتي',
   description: "عارض تراثي للمصحف الشريف وكتب الخواطر",
   manifest: '/manifest.json',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover',
-  themeColor: '#fdfbf7',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -46,21 +55,8 @@ export default function RootLayout({
       <body
         className={`${cairo.variable} ${amiri.variable} ${reemKufi.variable} antialiased bg-[#fdfbf7] text-slate-900`}
       >
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-                    if ('serviceWorker' in navigator) {
-                        window.addEventListener('load', function() {
-                            navigator.serviceWorker.register('/sw.js').then(function(registration) {
-                                console.log('ServiceWorker registration successful');
-                            }, function(err) {
-                                console.log('ServiceWorker registration failed: ', err);
-                            });
-                        });
-                    }
-                `
-          }}
-        />
+
+        <GlobalInstallBanner />
         {children}
       </body>
     </html>

@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Hash, BookOpen, X, CornerDownLeft } from 'lucide-react';
-import { QURAN_SURAHS, THOUGHTS_PAGES } from '@/data/quran_metadata';
+import { QURAN_SURAHS, THOUGHTS_PAGES, QURAN_PAGES, quranJuzData } from '@/data/quran_metadata';
 import { useReaderStore } from '@/store/useReaderStore';
 
 interface SpotlightSearchProps {
@@ -50,19 +50,26 @@ export default function SpotlightSearch({ isOpen, onClose }: SpotlightSearchProp
     // Search Logic
     const results = useMemo(() => {
         if (!query.trim()) return [];
-        const term = query.toLowerCase().trim();
+        const termRaw = query.toLowerCase().trim();
+        // Convert Eastern Arabic Numerals to standard digits
+        const term = termRaw.replace(/[٠-٩]/g, d => '0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(d)]);
+
         const searchResults: any[] = [];
+        const isPureNumber = /^\d+$/.test(term);
 
         // 1. Page Number Logic (Shared but different constraints)
         // Check for specific "Page X" pattern OR just a pure number
-        const pageMatch = term.match(/^(?:page|صفحة|ص)?\s*(\d+)$/);
+        const pageMatch = term.match(/^(?:page|صفحة|ص|الصفحة)?\s*(\d+)\s*$/i);
 
-        if (pageMatch) {
-            const pageNum = parseInt(pageMatch[1]);
+        if (pageMatch || isPureNumber) {
+            const pageNum = parseInt((pageMatch && pageMatch[1]) || term);
 
             if (currentBook === 'quran') {
                 if (pageNum >= 1 && pageNum <= 604) {
-                    searchResults.push({ type: 'page', number: pageNum, label: `الذهاب للصفحة ${pageNum}` });
+                    const mappedPage = QURAN_PAGES.find(p => p.quranPageNumber === pageNum);
+                    if (mappedPage) {
+                        searchResults.push({ type: 'page', number: mappedPage.pageNumber, label: `الذهاب للصفحة ${pageNum}` });
+                    }
                 }
             } else if (currentBook === 'thoughts') {
                 // Thoughts book logic
@@ -75,13 +82,34 @@ export default function SpotlightSearch({ isOpen, onClose }: SpotlightSearchProp
         // 2. Surah Search (Only for Quran)
         if (currentBook === 'quran') {
             const normalize = (text: string) => text.replace(/[أإآ]/g, 'ا').replace(/[ة]/g, 'ه');
+            const searchNormalized = normalize(term).replace(/^(سوره|سورة)\s+/, '');
 
             const surahMatches = QURAN_SURAHS
-                .filter(s => normalize(s.name).includes(normalize(term))) // Removed s.number check per request
-                .map(s => ({ type: 'surah', ...s }))
+                .filter(s => normalize(s.name).includes(searchNormalized)) // Removed s.number check per request
+                .map(s => {
+                    const mappedPage = QURAN_PAGES.find(p => p.quranPageNumber === s.startPage);
+                    return { type: 'surah', ...s, mappedStartPage: mappedPage?.pageNumber || s.startPage };
+                })
                 .slice(0, 5);
 
             searchResults.push(...surahMatches);
+
+            // 3. Juz Search
+            const juzMatch = term.match(/^(?:juz|جزء|الجزء)\s*(\d+)\s*$/i);
+            if (juzMatch || isPureNumber) {
+                const juzNum = parseInt((juzMatch && juzMatch[1]) || term);
+                const juzData = quranJuzData.find(j => j.id === juzNum);
+                if (juzData) {
+                    const mappedPage = QURAN_PAGES.find(p => p.quranPageNumber === juzData.startPage);
+                    searchResults.push({
+                        type: 'juz',
+                        juzId: juzData.id,
+                        mappedStartPage: mappedPage?.pageNumber || juzData.startPage,
+                        label: juzData.name,
+                        startPage: juzData.startPage
+                    });
+                }
+            }
         }
 
         return searchResults;
@@ -96,8 +124,8 @@ export default function SpotlightSearch({ isOpen, onClose }: SpotlightSearchProp
 
         if (item.type === 'page') {
             setPage(item.number);
-        } else if (item.type === 'surah') {
-            setPage(item.startPage);
+        } else if (item.type === 'surah' || item.type === 'juz') {
+            setPage(item.mappedStartPage);
         }
         onClose();
     };
@@ -106,6 +134,25 @@ export default function SpotlightSearch({ isOpen, onClose }: SpotlightSearchProp
     const placeholderText = currentBook === 'quran'
         ? "ابدأ البحث عن سورة أو رقم صفحة..."
         : "اكتب رقم الصفحة للذهاب إليها...";
+
+    const [modalTop, setModalTop] = useState(0);
+
+    // Track visual viewport to reposition modal when keyboard appears on mobile
+    useEffect(() => {
+        const updateTop = () => {
+            if (window.visualViewport) {
+                // Place modal near the top of the visible area with small padding
+                setModalTop(window.visualViewport.offsetTop + 12);
+            }
+        };
+        updateTop();
+        window.visualViewport?.addEventListener('resize', updateTop);
+        window.visualViewport?.addEventListener('scroll', updateTop);
+        return () => {
+            window.visualViewport?.removeEventListener('resize', updateTop);
+            window.visualViewport?.removeEventListener('scroll', updateTop);
+        };
+    }, [isOpen]);
 
     return (
         <AnimatePresence>
@@ -120,17 +167,19 @@ export default function SpotlightSearch({ isOpen, onClose }: SpotlightSearchProp
                         className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
                     />
 
-                    {/* Modal */}
-                    <div className="fixed inset-0 z-[101] flex items-start justify-center pt-[20vh] px-4 pointer-events-none">
+                    <div
+                        className="fixed left-0 right-0 z-[101] flex justify-center px-3 md:px-4 pointer-events-none"
+                        style={{ top: modalTop }}
+                    >
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: -20 }}
+                            initial={{ opacity: 0, scale: 0.95, y: -10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: -20 }}
-                            className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden pointer-events-auto border border-slate-100 flex flex-col max-h-[60vh] font-cairo"
+                            exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                            className="bg-white rounded-2xl md:rounded-xl shadow-2xl w-full max-w-lg overflow-hidden pointer-events-auto border border-slate-200/80 md:border-slate-100 flex flex-col max-h-[75vh] md:max-h-[70vh] font-cairo"
                             dir="rtl"
                         >
                             {/* Input Header */}
-                            <div className="flex items-center gap-3 p-4 border-b border-slate-100 bg-slate-50/50">
+                            <div className="flex items-center gap-2 md:gap-3 p-3 md:p-4 border-b border-slate-200/60 bg-slate-50/50">
                                 <Search className="text-slate-400 w-5 h-5 flex-shrink-0" />
                                 <input
                                     autoFocus
@@ -138,11 +187,12 @@ export default function SpotlightSearch({ isOpen, onClose }: SpotlightSearchProp
                                     placeholder={placeholderText}
                                     value={query}
                                     onChange={(e) => setQuery(e.target.value)}
-                                    className="flex-1 bg-transparent border-none outline-none text-lg text-slate-800 placeholder:text-slate-400 font-amiri"
+                                    className="flex-1 bg-transparent border-none outline-none focus:ring-0 text-[1rem] md:text-lg text-slate-800 placeholder:text-slate-400 font-amiri min-w-0"
+                                    style={{ WebkitAppearance: 'none' }}
                                 />
                                 <button
                                     onClick={onClose}
-                                    className="p-1 hover:bg-slate-200 rounded text-slate-500 text-xs font-mono border border-slate-200"
+                                    className="p-1 px-2 md:p-1 hover:bg-slate-200 rounded text-slate-500 text-[10px] md:text-xs font-mono border border-slate-200 flex-shrink-0"
                                 >
                                     ESC
                                 </button>
@@ -167,9 +217,9 @@ export default function SpotlightSearch({ isOpen, onClose }: SpotlightSearchProp
                                                     )}
                                                     <div className="flex flex-col">
                                                         <span className="font-bold text-lg font-amiri">
-                                                            {item.type === 'page' ? item.label : `سورة ${item.name}`}
+                                                            {item.type === 'page' ? item.label : item.type === 'surah' ? `سورة ${item.name}` : item.label}
                                                         </span>
-                                                        {item.type === 'surah' && (
+                                                        {(item.type === 'surah' || item.type === 'juz') && (
                                                             <span className={`text-xs ${index === activeIndex ? 'text-white/70' : 'text-slate-400'}`}>
                                                                 صفحة {item.startPage}
                                                             </span>
@@ -190,9 +240,19 @@ export default function SpotlightSearch({ isOpen, onClose }: SpotlightSearchProp
                                     <div className="p-8 text-center text-slate-400 text-sm">
                                         <p className="mb-2">جرب البحث عن:</p>
                                         <div className="flex flex-wrap gap-2 justify-center">
-                                            <span className="bg-slate-100 px-2 py-1 rounded text-xs">الكهف</span>
-                                            <span className="bg-slate-100 px-2 py-1 rounded text-xs">يس</span>
-                                            <span className="bg-slate-100 px-2 py-1 rounded text-xs">صفحة 100</span>
+                                            {currentBook === 'quran' ? (
+                                                <>
+                                                    <span className="bg-slate-100 px-2 py-1 rounded text-xs">الكهف</span>
+                                                    <span className="bg-slate-100 px-2 py-1 rounded text-xs">يس</span>
+                                                    <span className="bg-slate-100 px-2 py-1 rounded text-xs">صفحة 100</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span className="bg-slate-100 px-2 py-1 rounded text-xs">صفحة 10</span>
+                                                    <span className="bg-slate-100 px-2 py-1 rounded text-xs">صفحة 50</span>
+                                                    <span className="bg-slate-100 px-2 py-1 rounded text-xs">100</span>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                 )}

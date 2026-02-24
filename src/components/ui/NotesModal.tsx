@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useReaderStore } from '@/store/useReaderStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Save, Trash2, FilePenLine } from 'lucide-react';
+import { QURAN_PAGES } from '@/data/quran_metadata';
 
 interface NotesModalProps {
     isOpen: boolean;
@@ -13,23 +14,33 @@ interface NotesModalProps {
 export default function NotesModal({ isOpen, onClose }: NotesModalProps) {
     const { currentPage, currentBook, notes, saveNote, deleteNote } = useReaderStore();
     const [noteContent, setNoteContent] = useState('');
+    const [verseNumber, setVerseNumber] = useState('');
 
     // Determine current page ID
     const pageId = currentBook === 'quran'
-        ? `quran-${currentPage}`
+        ? `quran-file-${currentPage}` // Match the standard format used elsewhere
         : `thoughts-${currentPage}`;
+
+    // Compute tailored human-readable label for Note creation
+    const pageData = currentBook === 'quran' ? QURAN_PAGES.find(p => p.pageNumber === currentPage) : null;
+    const displayLabel = currentBook === 'quran' && pageData && !pageData.isIntro
+        ? `سورة ${pageData.surah} - صفحة ${pageData.quranPageNumber}`
+        : currentBook === 'quran'
+            ? `القرآن الكريم - غلاف/مقدمة`
+            : `خواطر وحكم - صفحة ${currentPage}`;
 
     // Load existing note when opening
     useEffect(() => {
         if (isOpen) {
             const existingNote = notes[pageId];
             setNoteContent(existingNote ? existingNote.content : '');
+            setVerseNumber(existingNote?.verseNumber || '');
         }
     }, [isOpen, pageId, notes]);
 
     const handleSave = () => {
         if (noteContent.trim()) {
-            saveNote(pageId, noteContent);
+            saveNote(pageId, noteContent, verseNumber.trim());
         } else {
             // Optional: confirm deletion of empty note?
             deleteNote(pageId);
@@ -40,6 +51,7 @@ export default function NotesModal({ isOpen, onClose }: NotesModalProps) {
     const handleDelete = () => {
         deleteNote(pageId);
         setNoteContent('');
+        setVerseNumber('');
         onClose();
     };
 
@@ -83,9 +95,19 @@ export default function NotesModal({ isOpen, onClose }: NotesModalProps) {
                         {/* Body */}
                         <div className="p-6 flex-1 flex flex-col gap-4 overflow-y-auto">
                             <div className="flex items-center gap-2 text-sm text-slate-500 font-cairo">
-                                <span>جاري إضافة ملاحظة للصفحة:</span>
-                                <span className="bg-sage-light px-2 py-0.5 rounded text-forest-green font-bold text-xs">{currentPage}</span>
+                                <span>جاري إضافة ملاحظة لـ:</span>
+                                <span className="bg-sage-light px-2 py-0.5 rounded text-forest-green font-bold text-xs">{displayLabel}</span>
                             </div>
+
+                            {currentBook === 'quran' && (
+                                <input
+                                    type="text"
+                                    placeholder="رقم الآية (اختياري)"
+                                    value={verseNumber}
+                                    onChange={(e) => setVerseNumber(e.target.value)}
+                                    className="w-full p-4 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-sage-green focus:border-sage-green focus:outline-none font-cairo text-slate-800 placeholder:text-slate-400"
+                                />
+                            )}
 
                             <textarea
                                 value={noteContent}

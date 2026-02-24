@@ -6,6 +6,7 @@ export type BookType = 'quran' | 'thoughts';
 interface Note {
     pageId: string;
     content: string;
+    verseNumber?: string;
     createdAt: number;
 }
 
@@ -21,7 +22,7 @@ interface ReaderState {
     setBook: (book: BookType) => void;
     setPage: (page: number) => void;
     toggleBookmark: (pageId: string) => void;
-    saveNote: (pageId: string, content: string) => void;
+    saveNote: (pageId: string, content: string, verseNumber?: string) => void;
     deleteNote: (pageId: string) => void;
 
     // UI State
@@ -34,6 +35,8 @@ interface ReaderState {
     rotatePage: () => void;
     isTwoPageView: boolean;
     setTwoPageView: (isTwoPage: boolean) => void;
+    isDarkMode: boolean;
+    toggleDarkMode: () => void;
 }
 
 export const useReaderStore = create<ReaderState>()(
@@ -41,7 +44,7 @@ export const useReaderStore = create<ReaderState>()(
         (set) => ({
             currentBook: 'quran',
             currentPage: 1, // This will be dynamic based on currentBook
-            quranPage: 5, // Start at Al-Fatiha (File 5)
+            quranPage: 4, // Start at Al-Fatiha (File 4)
             thoughtsPage: 1,
             bookmarks: [], // Initialize as empty string array
             notes: {},
@@ -69,14 +72,15 @@ export const useReaderStore = create<ReaderState>()(
                     : [...state.bookmarks, pageId],
             })),
 
-            saveNote: (pageId, content) => set((state) => ({
+            saveNote: (pageId, content, verseNumber) => set((state) => ({
                 notes: {
                     ...state.notes,
-                    [pageId]: { pageId, content, createdAt: Date.now() },
+                    [pageId]: { pageId, content, verseNumber, createdAt: Date.now() },
                 },
             })),
 
             deleteNote: (pageId) => set((state) => {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 const { [pageId]: _, ...remainingNotes } = state.notes;
                 return { notes: remainingNotes };
             }),
@@ -90,9 +94,11 @@ export const useReaderStore = create<ReaderState>()(
 
             isTwoPageView: false,
             setTwoPageView: (isTwoPage) => set({ isTwoPageView: isTwoPage }),
+            isDarkMode: false,
+            toggleDarkMode: () => set((state) => ({ isDarkMode: !state.isDarkMode })),
         }),
         {
-            name: 'heritage-reader-storage', // Restored to previous key
+            name: 'reader-storage',
             storage: createJSONStorage(() => localStorage),
         }
     )
