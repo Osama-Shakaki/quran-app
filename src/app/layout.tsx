@@ -74,6 +74,8 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl">
       <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#fdfbf7" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
