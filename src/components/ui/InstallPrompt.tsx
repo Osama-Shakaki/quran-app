@@ -81,13 +81,13 @@ export default function InstallPrompt({ onInstallSuccess, variant = 'sidebar' }:
     }, []);
 
     const handleInitialClick = () => {
-        // Open our custom confirmation modal first
+        // Always open our custom confirmation modal first
         setIsModalOpen(true);
     };
 
     const handleConfirm = async () => {
         if (deferredPrompt) {
-            // Trigger the native OS prompt
+            // Trigger the native OS prompt from the confirmation modal
             await deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
             console.log('User choice:', outcome);
