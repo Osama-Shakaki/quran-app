@@ -35,13 +35,33 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'مكتبتي',
-  description: "عارض تراثي للمصحف الشريف وكتب الخواطر",
+  title: 'مكتبتي | التفسير والخواطر',
+  description: "تطبيق تفاعلي يجمع بين تفسير القرآن الكريم ودفتر للخواطر",
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'Heritage Reader'
+  },
+  openGraph: {
+    title: "مكتبتي | التفسير والخواطر",
+    description: "تطبيق تفاعلي يجمع بين تفسير القرآن الكريم ودفتر للخواطر",
+    siteName: "مكتبتي",
+    locale: "ar_SA",
+    type: "website",
+    images: [
+      {
+        url: "/share-logo.png",
+        width: 800,
+        height: 800,
+      }
+    ]
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "مكتبتي | التفسير والخواطر",
+    description: "تطبيق تفاعلي يجمع بين تفسير القرآن الكريم ودفتر للخواطر",
+    images: ["/share-logo.png"]
   }
 };
 
