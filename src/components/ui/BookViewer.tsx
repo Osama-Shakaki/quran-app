@@ -26,6 +26,7 @@ export default function BookViewer() {
 
     const [direction, setDirection] = useState(0);
     const [isZoomed, setIsZoomed] = useState(false);
+    const [isLandscapeState, setIsLandscapeState] = useState(false);
     const prevPosY = useRef(0);
 
     // Detect Tablet/Desktop Landscape
@@ -44,6 +45,7 @@ export default function BookViewer() {
                 // If we exit landscape (portrait mode), always force single page
                 setTwoPageView(false);
             }
+            setIsLandscapeState(isLandscape);
         };
 
         checkLayout();
@@ -196,7 +198,12 @@ export default function BookViewer() {
                     src={pageData.imageSrc}
                     alt={`صفحة ${pageData.pageNumber}`}
                     fill
-                    className={`object-contain ${isTwoPageView ? (isRightSide ? 'object-left' : 'object-right') : ''}`}
+                    className={`
+                        ${isTwoPageView
+                            ? (isRightSide ? 'object-contain object-left' : 'object-contain object-right')
+                            : (isLandscapeState ? 'object-cover object-top' : 'object-contain')
+                        }
+                    `}
                     priority
                     unoptimized
                     sizes={isTwoPageView ? "50vw" : "100vw"}
