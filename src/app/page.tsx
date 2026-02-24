@@ -79,7 +79,7 @@ export default function Home() {
             </span>
           </h1>
           <p className="text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed font-light">
-            المصحف الشريف وصفحات الخواطر، بتجربة قراءة عصرية تحاكي الورق
+            المصحف المفسر و صفحات الخواطر بتجربة عصرية تحاكي الورق
           </p>
         </motion.div>
 

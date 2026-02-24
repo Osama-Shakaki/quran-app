@@ -100,7 +100,7 @@ export default function FloatingStatusBar({ onOpenSearch }: FloatingStatusBarPro
             whileTap={{ scale: 0.95 }}
             onClick={onOpenSearch}
             className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 
-                       flex items-center gap-3 px-5 py-2 
+                       flex items-center gap-3 px-5 py-2 mb-[env(safe-area-inset-bottom)]
                        bg-black/30 backdrop-blur-md 
                        text-white rounded-full shadow-lg 
                        border border-white/10 hover:bg-black/40 transition-colors"

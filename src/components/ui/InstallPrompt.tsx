@@ -22,6 +22,8 @@ if (typeof window !== 'undefined') {
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         cachedPrompt = e as BeforeInstallPromptEvent;
+        // Expose globally for GlobalInstallBanner
+        (window as any).cachedPrompt = e;
         // Optionally dispatch a custom event if it mounts later
         window.dispatchEvent(new CustomEvent('app-pwa-ready', { detail: e }));
     });
@@ -35,7 +37,6 @@ export default function InstallPrompt({ onInstallSuccess, variant = 'sidebar' }:
     // Modal states
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [showIOSInstructions, setShowIOSInstructions] = useState(false);
-    const [showOtherInstructions, setShowOtherInstructions] = useState(false);
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -55,6 +56,7 @@ export default function InstallPrompt({ onInstallSuccess, variant = 'sidebar' }:
         const handleBeforeInstallPrompt = (e: Event) => {
             e.preventDefault();
             cachedPrompt = e as BeforeInstallPromptEvent;
+            (window as any).cachedPrompt = e;
             setDeferredPrompt(e as BeforeInstallPromptEvent);
             // Show the button only after the event is captured
             setShowButton(true);
@@ -66,8 +68,18 @@ export default function InstallPrompt({ onInstallSuccess, variant = 'sidebar' }:
             setShowButton(true);
         };
 
+        const handleAppInstalled = () => {
+            setIsStandalone(true);
+            setDeferredPrompt(null);
+            setShowButton(false);
+            if (onInstallSuccess) onInstallSuccess();
+            window.dispatchEvent(new Event('hide-install-bubble'));
+            console.log('PWA was installed');
+        };
+
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
         window.addEventListener('app-pwa-ready', handleCustomEvent);
+        window.addEventListener('appinstalled', handleAppInstalled);
 
         // If we already have it from the cache, update button visibility
         if (cachedPrompt) {
@@ -77,17 +89,13 @@ export default function InstallPrompt({ onInstallSuccess, variant = 'sidebar' }:
         return () => {
             window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
             window.removeEventListener('app-pwa-ready', handleCustomEvent);
+            window.removeEventListener('appinstalled', handleAppInstalled);
         };
     }, []);
 
-    const handleInitialClick = () => {
-        // Always open our custom confirmation modal first
-        setIsModalOpen(true);
-    };
-
-    const handleConfirm = async () => {
+    const handleInitialClick = async () => {
         if (deferredPrompt) {
-            // Trigger the native OS prompt from the confirmation modal
+            // Trigger the native OS prompt directly
             await deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
             console.log('User choice:', outcome);
@@ -99,24 +107,26 @@ export default function InstallPrompt({ onInstallSuccess, variant = 'sidebar' }:
             setDeferredPrompt(null);
             setIsModalOpen(false);
         } else {
-            // Fallback for iOS / Unsupported browsers (or Incognito mode)
+            // Fallback for iOS / Unsupported browsers
             const isIos = /ipad|iphone|ipod/.test(navigator.userAgent.toLowerCase()) && !('MSStream' in window);
             if (isIos) {
-                // Switch modal to show iOS instructions instead of native alert
+                // Show iOS instructions modal
+                setIsModalOpen(true);
                 setShowIOSInstructions(true);
             } else {
-                // Switch modal to show generic/desktop instructions
-                setShowOtherInstructions(true);
+                // Android/Windows but no deferredPrompt (e.g. incognito or already installed)
+                // The user requested NOT to see the manual instructions box.
+                // We show a simple alert or just do nothing, or show the fallback if they REALLY need it, 
+                // but since they explicitly disliked the "manual install steps", we just don't open the modal.
+                console.log("Native install not available. Check if already installed or using HTTPS.");
             }
         }
     };
 
     const handleCloseModal = () => {
         setIsModalOpen(false);
-        // Reset instructions state when closing so it's fresh next time
         setTimeout(() => {
             setShowIOSInstructions(false);
-            setShowOtherInstructions(false);
         }, 300);
     };
 
@@ -195,44 +205,7 @@ export default function InstallPrompt({ onInstallSuccess, variant = 'sidebar' }:
                                 className="bg-[#fdfbf7] w-full max-w-sm rounded-3xl md:rounded-[2rem] shadow-2xl overflow-hidden border border-slate-200/50 mx-2 md:mx-0"
                             >
                                 <div className="p-5 md:p-7">
-                                    {!showIOSInstructions && !showOtherInstructions ? (
-                                        <>
-                                            <div className="w-20 h-20 bg-forest-green/10 rounded-full flex items-center justify-center mx-auto mb-5 text-forest-green relative">
-                                                <div className="absolute inset-0 bg-forest-green/20 rounded-full animate-ping opacity-20" />
-                                                <Download size={36} />
-                                            </div>
-                                            <h3 className="text-2xl font-amiri font-bold text-center text-slate-800 mb-3">
-                                                التثبيت كتطبيق
-                                            </h3>
-                                            <p className="text-center text-slate-600 mb-8 leading-relaxed font-medium">
-                                                هل ترغب في تثبيت تطبيق "مكتبتي" ليعمل كبرنامج مستقل على جهازك وبدون الحاجة للإتصال بالإنترنت؟
-                                            </p>
-                                            <div className="flex gap-3">
-                                                <button
-                                                    onClick={handleConfirm}
-                                                    className="flex-1 bg-forest-green text-white py-3.5 rounded-xl font-bold transition-transform active:scale-95 shadow-md shadow-forest-green/20"
-                                                >
-                                                    تأكيد
-                                                </button>
-                                                <button
-                                                    onClick={handleCloseModal}
-                                                    className="flex-1 bg-slate-200/80 text-slate-700 py-3.5 rounded-xl font-bold transition-transform active:scale-95 hover:bg-slate-300/80"
-                                                >
-                                                    إلغاء
-                                                </button>
-                                            </div>
-                                            <button
-                                                onClick={() => {
-                                                    handleCloseModal();
-                                                    window.dispatchEvent(new Event('hide-install-bubble'));
-                                                    localStorage.setItem('install-bubble-dismissed', 'true');
-                                                }}
-                                                className="mt-4 w-full text-center text-[0.85rem] text-slate-400 hover:text-slate-600 font-medium transition-colors"
-                                            >
-                                                لا تظهر هذه النافذة مجدداً
-                                            </button>
-                                        </>
-                                    ) : showIOSInstructions ? (
+                                    {showIOSInstructions ? (
                                         <>
                                             <div className="flex justify-between items-center mb-6">
                                                 <h3 className="text-xl font-amiri font-bold text-slate-800">
@@ -265,44 +238,7 @@ export default function InstallPrompt({ onInstallSuccess, variant = 'sidebar' }:
                                             </button>
                                         </>
                                     ) : (
-                                        <>
-                                            <div className="flex justify-between items-center mb-6">
-                                                <h3 className="text-xl font-amiri font-bold text-slate-800">
-                                                    خطوات التثبيت اليدوي
-                                                </h3>
-                                                <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600 transition-colors p-2 bg-slate-100/50 rounded-full">
-                                                    <X size={20} />
-                                                </button>
-                                            </div>
-
-                                            <div className="flex flex-col gap-4 mb-8">
-                                                <div className="bg-amber-50 text-amber-800 p-4 rounded-xl border border-amber-200 shadow-sm flex gap-3 text-sm font-medium mb-2 leading-relaxed">
-                                                    <Info size={28} className="shrink-0 mt-0.5 text-amber-600" />
-                                                    <p>التثبيت التلقائي يتطلب اتصالاً آمناً (HTTPS) ولا يعمل عبر الشبكة المحلية المؤقتة. يمكنك التثبيت يدوياً باتباع الخطوات، أو الانتظار وسيعمل التلقائي فور رفع التطبيق على الإنترنت.</p>
-                                                </div>
-
-                                                <div className="flex flex-col gap-3">
-                                                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
-                                                        <p className="text-sm text-slate-700">
-                                                            <strong className="text-slate-900 block mb-1">💻 أجهزة الكمبيوتر:</strong>
-                                                            ابحث عن أيقونة التثبيت <span className="inline-block bg-slate-100 px-1 rounded mx-1">⬇️</span> في شريط عنوان المتصفح (URL).
-                                                        </p>
-                                                    </div>
-                                                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
-                                                        <p className="text-sm text-slate-700">
-                                                            <strong className="text-slate-900 block mb-1">📱 أجهزة الأندرويد:</strong>
-                                                            افتح قائمة المتصفح <span className="inline-block bg-slate-100 px-1 rounded mx-1">⋮</span> واختر <strong className="text-forest-green">إضافة للشاشة الرئيسية</strong>.
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={handleCloseModal}
-                                                className="w-full bg-forest-green text-white py-3.5 rounded-xl font-bold transition-transform active:scale-95 shadow-md shadow-forest-green/20"
-                                            >
-                                                حسناً، فهمت
-                                            </button>
-                                        </>
+                                        null
                                     )}
                                 </div>
                             </motion.div>

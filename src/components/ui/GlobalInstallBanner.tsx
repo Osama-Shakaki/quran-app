@@ -13,6 +13,7 @@ export default function GlobalInstallBanner() {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isDismissed, setIsDismissed] = useState(false);
     const [isDontShowChecked, setIsDontShowChecked] = useState(false);
+    const [isInstallSupported, setIsInstallSupported] = useState(false);
 
     useEffect(() => {
         const checkStandalone = () => {
@@ -28,6 +29,23 @@ export default function GlobalInstallBanner() {
             }
         };
 
+        const checkInstallSupport = () => {
+            // For iOS devices, we always show it because they don't support beforeinstallprompt
+            const isIos = /ipad|iphone|ipod/.test(navigator.userAgent.toLowerCase()) && !('MSStream' in window);
+            if (isIos) {
+                setIsInstallSupported(true);
+            }
+
+            // Check if we already have the event cached globally by InstallPrompt
+            if (window.hasOwnProperty('cachedInstallEvent') || (window as any).cachedPrompt) {
+                setIsInstallSupported(true);
+            }
+        };
+
+        const handlePwaReady = () => {
+            setIsInstallSupported(true);
+        };
+
         const handleForceHide = () => {
             setIsVisible(false);
             setIsExpanded(false);
@@ -35,9 +53,17 @@ export default function GlobalInstallBanner() {
         };
 
         window.addEventListener('hide-install-bubble', handleForceHide);
-        checkStandalone();
+        window.addEventListener('app-pwa-ready', handlePwaReady);
+        window.addEventListener('beforeinstallprompt', handlePwaReady);
 
-        return () => window.removeEventListener('hide-install-bubble', handleForceHide);
+        checkStandalone();
+        checkInstallSupport();
+
+        return () => {
+            window.removeEventListener('hide-install-bubble', handleForceHide);
+            window.removeEventListener('app-pwa-ready', handlePwaReady);
+            window.removeEventListener('beforeinstallprompt', handlePwaReady);
+        };
     }, []);
 
     const handleDismiss = (e: React.MouseEvent) => {
@@ -61,7 +87,7 @@ export default function GlobalInstallBanner() {
         }
     };
 
-    if (isStandalone || isDismissed || pathname !== '/') return null;
+    if (isStandalone || isDismissed || pathname !== '/' || !isInstallSupported) return null;
 
     return (
         <AnimatePresence>
@@ -71,7 +97,7 @@ export default function GlobalInstallBanner() {
                     animate={{ y: 0, opacity: 1, scale: 1 }}
                     exit={{ y: 50, opacity: 0, scale: 0.8 }}
                     transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                    className="fixed bottom-6 left-6 md:bottom-8 md:left-8 z-[90] font-cairo flex flex-col items-start"
+                    className="fixed bottom-6 left-6 md:bottom-8 md:left-8 z-[90] font-cairo flex flex-col items-start mb-[env(safe-area-inset-bottom)]"
                     dir="rtl"
                 >
                     <AnimatePresence>

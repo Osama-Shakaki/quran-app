@@ -34,7 +34,7 @@ export default function ReaderToolbar({
     const buttonClass = "w-10 h-10 flex items-center justify-center text-black transition-all hover:scale-110 active:scale-95 pointer-events-auto drop-shadow-md";
 
     return (
-        <div className="w-full h-16 flex items-center justify-between px-4 z-[60] bg-transparent" dir="ltr">
+        <div className="w-full h-16 flex items-center justify-between px-4 z-[60] bg-transparent pt-[env(safe-area-inset-top)]" dir="ltr">
             {/* Left Side: Actions (Notes, Bookmark, Search) */}
             <div className="flex items-center gap-2">
                 {isLandscape && onToggleTwoPage && (

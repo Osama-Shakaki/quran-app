@@ -200,8 +200,8 @@ export default function NavigationOverlay({ onNotesClick }: NavigationOverlayPro
                 if (currentBook !== 'thoughts') {
                     setBook('thoughts');
                 }
-                if (!pathname.includes('/thoughts/viewer')) {
-                    router.push('/thoughts/viewer'); // Perform actual Next.js navigation
+                if (!pathname.includes('/thoughts')) {
+                    router.push('/thoughts'); // Perform actual Next.js navigation
                 }
                 setPage(pageNum);
             } else {
@@ -236,7 +236,7 @@ export default function NavigationOverlay({ onNotesClick }: NavigationOverlayPro
                         animate="visible"
                         exit="exit"
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className="fixed top-0 left-0 right-0 z-50 pointer-events-none"
+                        className="fixed top-0 left-0 right-0 z-50 pointer-events-none pt-[env(safe-area-inset-top)]"
                     >
                         <div className="w-full pointer-events-auto">
                             <ReaderToolbar
@@ -279,7 +279,7 @@ export default function NavigationOverlay({ onNotesClick }: NavigationOverlayPro
                             dir="rtl"
                         >
                             {/* Drawer Header */}
-                            <div className="flex justify-between items-center p-6 border-b border-slate-200 bg-white/50 backdrop-blur-sm">
+                            <div className="flex justify-between items-center p-6 border-b border-slate-200 bg-white/50 backdrop-blur-sm pt-[max(1.5rem,env(safe-area-inset-top))]">
                                 <h2 className="text-2xl font-amiri font-bold text-forest-green">القائمة</h2>
                                 <button
                                     onClick={() => setIsMenuOpen(false)}
