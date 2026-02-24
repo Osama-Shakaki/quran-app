@@ -19,11 +19,18 @@ interface BeforeInstallPromptEvent extends Event {
 // Cache the event at the module level so it's not missed if the component mounts late
 let cachedPrompt: BeforeInstallPromptEvent | null = null;
 if (typeof window !== 'undefined') {
+    // Check if the global script caught it before React hydrated
+    if ((window as any).globalInstallPrompt) {
+        cachedPrompt = (window as any).globalInstallPrompt;
+        (window as any).cachedPrompt = (window as any).globalInstallPrompt;
+    }
+
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         cachedPrompt = e as BeforeInstallPromptEvent;
         // Expose globally for GlobalInstallBanner
         (window as any).cachedPrompt = e;
+        (window as any).globalInstallPrompt = e;
         // Optionally dispatch a custom event if it mounts later
         window.dispatchEvent(new CustomEvent('app-pwa-ready', { detail: e }));
     });
@@ -57,6 +64,7 @@ export default function InstallPrompt({ onInstallSuccess, variant = 'sidebar' }:
             e.preventDefault();
             cachedPrompt = e as BeforeInstallPromptEvent;
             (window as any).cachedPrompt = e;
+            (window as any).globalInstallPrompt = e;
             setDeferredPrompt(e as BeforeInstallPromptEvent);
             // Show the button only after the event is captured
             setShowButton(true);
@@ -81,8 +89,11 @@ export default function InstallPrompt({ onInstallSuccess, variant = 'sidebar' }:
         window.addEventListener('app-pwa-ready', handleCustomEvent);
         window.addEventListener('appinstalled', handleAppInstalled);
 
-        // If we already have it from the cache, update button visibility
-        if (cachedPrompt) {
+        // If we already have it from the cache or global inline script, update button visibility
+        if (cachedPrompt || (window as any).globalInstallPrompt) {
+            if (!cachedPrompt && (window as any).globalInstallPrompt) {
+                setDeferredPrompt((window as any).globalInstallPrompt);
+            }
             setShowButton(true);
         }
 

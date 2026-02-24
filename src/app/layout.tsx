@@ -73,6 +73,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.globalInstallPrompt = null;
+              window.addEventListener('beforeinstallprompt', function(e) {
+                e.preventDefault();
+                window.globalInstallPrompt = e;
+                window.dispatchEvent(new Event('app-pwa-ready'));
+              });
+            `,
+          }}
+        />
+      </head>
       <body
         className={`${cairo.variable} ${amiri.variable} ${reemKufi.variable} antialiased bg-[#fdfbf7] text-slate-900`}
       >

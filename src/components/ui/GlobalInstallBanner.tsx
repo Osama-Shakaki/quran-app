@@ -36,8 +36,8 @@ export default function GlobalInstallBanner() {
                 setIsInstallSupported(true);
             }
 
-            // Check if we already have the event cached globally by InstallPrompt
-            if (window.hasOwnProperty('cachedInstallEvent') || (window as any).cachedPrompt) {
+            // Check if we already have the event cached globally by InstallPrompt or Layout inline script
+            if (window.hasOwnProperty('cachedInstallEvent') || (window as any).cachedPrompt || (window as any).globalInstallPrompt) {
                 setIsInstallSupported(true);
             }
         };
