@@ -212,21 +212,11 @@ export const QURAN_PAGES: PageData[] = Array.from({ length: 607 }, (_, i) => {
 });
 
 
-export const THOUGHTS_PAGES: PageData[] = Array.from({ length: 108 }, (_, i) => {
+export const THOUGHTS_PAGES: PageData[] = Array.from({ length: 109 }, (_, i) => {
     const sequentialPage = i + 1;
-    // Calculate actual filename offset due to deleted files 54.webp and 101.webp
-    let filePage = sequentialPage;
-    if (sequentialPage >= 54) {
-        filePage += 1; // Skip 54
-    }
-    // We check against 100 here since if sequentialPage is 100, filePage is 101 (which is deleted)
-    if (sequentialPage >= 100) {
-        filePage += 1; // Skip 101
-    }
-
     return {
         id: `thoughts-${sequentialPage}`,
         pageNumber: sequentialPage,
-        imageSrc: `/images/thoughts/${filePage}.webp`,
+        imageSrc: `/images/thoughts/${String(sequentialPage).padStart(3, '0')}.webp`,
     };
 });
