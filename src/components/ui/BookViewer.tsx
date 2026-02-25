@@ -153,7 +153,7 @@ export default function BookViewer() {
             if (isTwoPageView) {
                 if (dx > 0) paginate(1); else paginate(-1);
             } else {
-                if (dx > 0) paginate(-1); else paginate(1);
+                if (dx > 0) paginate(1); else paginate(-1);
             }
             activeId = null;
         };
