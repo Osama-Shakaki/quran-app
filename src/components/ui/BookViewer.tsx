@@ -20,176 +20,227 @@ export default function BookViewer() {
     const setUIVisible = useReaderStore((state) => state.setUIVisible);
     const rotation = useReaderStore((state) => state.rotation);
     const isTwoPageViewRaw = useReaderStore((state) => state.isTwoPageView);
-    // Force Single Page View for Thoughts book
     const isTwoPageView = isTwoPageViewRaw && currentBook === 'quran';
     const setTwoPageView = useReaderStore((state) => state.setTwoPageView);
 
     const [direction, setDirection] = useState(0);
     const [isZoomed, setIsZoomed] = useState(false);
     const [isLandscapeState, setIsLandscapeState] = useState(false);
+    const [isMobileLandscape, setIsMobileLandscape] = useState(false);
+    const [isTouchDevice, setIsTouchDevice] = useState(false);
+    const [isPhoneLandscape, setIsPhoneLandscape] = useState(false);
+    // activeLandscape: خاص بالقرآن في landscape على أجهزة اللمس
+    const activeLandscape = isMobileLandscape && currentBook === 'quran';
+    // isThoughtsPhoneLandscape: جوال بالوضع الأفقي + كتاب الخواطر
+    const isThoughtsPhoneLandscape = isPhoneLandscape && currentBook === 'thoughts';
+    // isThoughtsMobile: كتاب الخواطر على جهاز لمس → يملأ الشاشة كاملة
+    const isThoughtsMobile = isTouchDevice && currentBook === 'thoughts';
     const prevPosY = useRef(0);
+    // ref for scrollable root in landscape
+    const scrollRef = useRef<HTMLDivElement>(null);
 
-    // Detect Tablet/Desktop Landscape
+    // ── Layout Detection ────────────────────────────────────────────────────
     useEffect(() => {
         const checkLayout = () => {
-            // Check if we are in landscape
-            const isLandscape = window.matchMedia("(orientation: landscape)").matches;
-            // Check if it's desktop width
-            const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
+            const isLand = window.matchMedia('(orientation: landscape)').matches;
+            // pointer:coarse = جوال + أيباد (touch). pointer:fine = كمبيوتر/لابتوب (mouse)
+            const isTouch = window.matchMedia('(pointer: coarse)').matches;
+            const mobileLand = isLand && isTouch;
 
-            // Only force Two Page view initially for Desktop landscape for Quran
-            // If it's mobile landscape, we let the user toggle it (don't force it)
-            if (isDesktop && isLandscape && currentBook === 'quran') {
-                setTwoPageView(true);
-            } else if (!isLandscape) {
-                // If we exit landscape (portrait mode), always force single page
-                setTwoPageView(false);
-            }
-            setIsLandscapeState(isLandscape);
+            if (!isLand) setTwoPageView(false);
+            setIsLandscapeState(isLand);
+            setIsMobileLandscape(mobileLand);
+            setIsTouchDevice(isTouch);
+            // جوال فقط (ليس أيباد): max-height في landscape أقل من  600px
+            const isPhone = isTouch && isLand && window.matchMedia('(max-height: 600px)').matches;
+            setIsPhoneLandscape(isPhone);
         };
 
         checkLayout();
         window.addEventListener('resize', checkLayout);
-        return () => window.removeEventListener('resize', checkLayout);
+        window.addEventListener('orientationchange', checkLayout);
+        return () => {
+            window.removeEventListener('resize', checkLayout);
+            window.removeEventListener('orientationchange', checkLayout);
+        };
     }, [currentBook, setTwoPageView]);
 
-    // Determine Spread Pages
-    // For Quran: Page 4 (Fatiha) is Right, Page 5 (Baqarah) is Left -> Even is Right.
-    // For Thoughts: Page 1 (Cover) is Right -> Odd is Right.
+    // ── Scroll to top on page change (landscape) ────────────────────────────
+    useEffect(() => {
+        if (isMobileLandscape && scrollRef.current) {
+            scrollRef.current.scrollTop = 0;
+        }
+    }, [currentPage, isMobileLandscape]);
+
+    // ── Spread Pages ────────────────────────────────────────────────────────
     const rightPageNum = currentBook === 'quran'
         ? (currentPage % 2 === 0 ? currentPage : currentPage - 1)
         : (currentPage % 2 !== 0 ? currentPage : currentPage - 1);
     const leftPageNum = rightPageNum + 1;
 
-    // Get Data
     const rightPageData = pages.find(p => p.pageNumber === rightPageNum);
     const leftPageData = pages.find(p => p.pageNumber === leftPageNum);
 
-    // Preload next and previous pages for smoother swiping
+    // ── Preload ─────────────────────────────────────────────────────────────
     const preloadPages = useMemo(() => {
-        const pagesToLoad = [];
-        const start = Math.max(1, currentPage - 10); // Preload up to 10 pages back
-        const end = Math.min(pages.length, currentPage + 10); // Preload up to 10 pages ahead
+        const pagesToLoad: PageData[] = [];
+        const start = Math.max(1, currentPage - 10);
+        const end = Math.min(pages.length, currentPage + 10);
         for (let i = start; i <= end; i++) {
             if (i !== rightPageNum && i !== leftPageNum && (!isTwoPageView ? i !== currentPage : true)) {
-                const pageData = pages.find(p => p.pageNumber === i);
-                if (pageData) pagesToLoad.push(pageData);
+                const p = pages.find(p => p.pageNumber === i);
+                if (p) pagesToLoad.push(p);
             }
         }
         return pagesToLoad;
     }, [currentPage, pages, rightPageNum, leftPageNum, isTwoPageView]);
 
-    // Navigation Helper
+    // ── Navigation ──────────────────────────────────────────────────────────
     const paginate = (newDirection: number) => {
-        // Use the locally derived isTwoPageView which forcefully disables it for Thoughts book
         const step = isTwoPageView ? 2 : 1;
-        let newPage = currentPage + (newDirection * step);
-
-        // Prevent odd ending index bug if jumping by 2
-        if (isTwoPageView && newDirection === 1 && newPage > pages.length) {
-            newPage = pages.length;
-        }
-
+        let newPage = currentPage + newDirection * step;
+        if (isTwoPageView && newDirection === 1 && newPage > pages.length) newPage = pages.length;
         if (newPage >= 1 && newPage <= pages.length) {
             setDirection(newDirection);
             setPage(newPage);
         }
     };
 
-    // Keyboard Navigation
+    // ── Keyboard ────────────────────────────────────────────────────────────
     useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'ArrowLeft') {
-                paginate(1); // Next
-            } else if (e.key === 'ArrowRight') {
-                paginate(-1); // Prev
-            }
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'ArrowLeft') paginate(1);
+            if (e.key === 'ArrowRight') paginate(-1);
         };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
     }, [currentPage, pages.length, isTwoPageView]);
 
-    // Swipe Gesture Handler
-    const bind = useDrag(({ active, movement: [mx], direction: [xDir], cancel, tap, touches }) => {
+    // ── useDrag Swipe (Portrait + Desktop) ──────────────────────────────────
+    const bind = useDrag(({ active, movement: [mx], cancel, tap, touches }) => {
         if (isZoomed || tap || touches > 1) return;
-
         if (active && Math.abs(mx) > 100) {
-            // REVERSED ARABIC LOGIC:
-            // Swipe Left (← / Negative) -> Next Page (page + 1)
-            // Swipe Right (→ / Positive) -> Previous Page (page - 1)
-            // 
-            // Wait, this comment matches the OLD code.
-            // But user said "The Swipe Gestures ... are currently inverted ... I need to flip them."
-            // So if I flip them:
-
-            if (mx < 0 && currentPage > 1) {
-                // Left Swipe (←) -> Go PREVIOUS (Visual: Dragging left reveals right content?)
-                paginate(-1);
-            } else if (mx > 0 && currentPage < pages.length) {
-                // Right Swipe (→) -> Go NEXT (Visual: Dragging right reveals left content)
-                paginate(1);
-            }
+            if (mx < 0 && currentPage > 1) paginate(-1);
+            else if (mx > 0 && currentPage < pages.length) paginate(1);
             cancel();
         }
-    }, {
-        axis: 'x',
-        filterTaps: true,
-        rubberband: true,
-        bgSwipe: true,
-        pointer: { touch: true },
-    });
+    }, { axis: 'x', filterTaps: true, rubberband: true, bgSwipe: true, pointer: { touch: true } });
 
-    // Variants for faster page transitions
+    // ── Global Pointer Events Swipe (Mobile Landscape only) ─────────────────
+    useEffect(() => {
+        if (!isMobileLandscape || currentBook !== 'quran') return;
+
+        let startX = 0, startY = 0, startTime = 0;
+        let activeId: number | null = null;
+        let pointerCount = 0, aborted = false;
+
+        const onDown = (e: PointerEvent) => {
+            pointerCount++;
+            if (!e.isPrimary || pointerCount > 1) { aborted = true; return; }
+            activeId = e.pointerId; startX = e.clientX; startY = e.clientY;
+            startTime = Date.now(); aborted = false;
+        };
+        const onMove = (e: PointerEvent) => { if (pointerCount > 1) aborted = true; };
+        const onUp = (e: PointerEvent) => {
+            pointerCount = Math.max(0, pointerCount - 1);
+            if (aborted || e.pointerId !== activeId || isZoomed) return;
+            const dx = e.clientX - startX, dy = e.clientY - startY;
+            const dt = Date.now() - startTime, dist = Math.abs(dx);
+            if (Math.abs(dx) <= Math.abs(dy) * 1.5) return;
+            if (!((dist > 30 && dt < 300) || dist > 60)) return;
+            // وضع الصفحتين (RTL): يمين=التالي، يسار=السابق
+            // الصفحة الواحدة: يمين=السابق، يسار=التالي
+            if (isTwoPageView) {
+                if (dx > 0) paginate(1); else paginate(-1);
+            } else {
+                if (dx > 0) paginate(-1); else paginate(1);
+            }
+            activeId = null;
+        };
+        const onCancel = () => { aborted = true; pointerCount = 0; activeId = null; };
+
+        window.addEventListener('pointerdown', onDown);
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', onUp);
+        window.addEventListener('pointercancel', onCancel);
+        return () => {
+            window.removeEventListener('pointerdown', onDown);
+            window.removeEventListener('pointermove', onMove);
+            window.removeEventListener('pointerup', onUp);
+            window.removeEventListener('pointercancel', onCancel);
+        };
+    }, [isMobileLandscape, currentBook, isZoomed, currentPage, pages.length, isTwoPageView]);
+
+    // ── Variants ────────────────────────────────────────────────────────────
     const variants = {
-        enter: (direction: number) => ({
-            x: direction > 0 ? -800 : 800,
-            opacity: 0,
-            scale: 0.98,
-            zIndex: 0
-        }),
-        center: {
-            zIndex: 1,
-            x: 0,
-            opacity: 1,
-            scale: 1
-        },
-        exit: (direction: number) => ({
-            zIndex: 0,
-            x: direction > 0 ? 800 : -800,
-            opacity: 0,
-            scale: 0.98
-        })
+        enter: (d: number) => ({ x: d > 0 ? -800 : 800, opacity: 0, scale: 0.98, zIndex: 0 }),
+        center: { zIndex: 1, x: 0, opacity: 1, scale: 1 },
+        exit: (d: number) => ({ zIndex: 0, x: d > 0 ? 800 : -800, opacity: 0, scale: 0.98 }),
     };
 
-    // Helper to render a single page
+    // ── Render Page ─────────────────────────────────────────────────────────
     const renderPage = (pageData: PageData | undefined, isRightSide: boolean) => {
         if (!pageData) return <div className="hidden lg:block w-1/2 h-full bg-transparent" />;
 
+        // Mobile landscape + Single page: full-width scrollable (aspect-ratio with scroll)
+        const landscapeSingleStyle: React.CSSProperties = {
+            position: 'relative',
+            width: '100%',
+            aspectRatio: '0.68 / 1',
+        };
+
+        // Mobile landscape + Two pages: fit to screen height, auto width
+        const landscapeTwoPageStyle: React.CSSProperties = {
+            position: 'relative',
+            height: '100%',
+            width: 'auto',
+            aspectRatio: '0.68 / 1',
+            maxHeight: '100vh',
+        };
+
+        const portraitPageStyle: React.CSSProperties = {
+            transform: `rotate(${rotation}deg)`,
+            width: rotation % 180 !== 0 ? '100vh' : undefined,
+            height: rotation % 180 !== 0 ? '100vw' : undefined,
+        };
+
         return (
             <div
-                className={`relative h-full transition-transform duration-300 ease-in-out ${isTwoPageView ? 'w-1/2' : 'w-full'}`}
-                style={{
-                    transform: `rotate(${rotation}deg)`,
-                    // When rotated 90/270, swap dimensions to fit screen
-                    width: rotation % 180 !== 0 ? '100vh' : undefined,
-                    height: rotation % 180 !== 0 ? '100vw' : undefined,
-                }}
+                className={
+                    activeLandscape
+                        ? isTwoPageView
+                            ? 'relative flex-shrink-0'
+                            : ''
+                        : `relative transition-transform duration-300 ease-in-out ${isTwoPageView ? 'max-h-full' : 'w-full h-full'
+                        }`
+                }
+                style={
+                    activeLandscape
+                        ? isTwoPageView
+                            ? landscapeTwoPageStyle
+                            : landscapeSingleStyle
+                        : {
+                            ...(isTwoPageView ? { aspectRatio: '0.68 / 1', height: '100%', width: 'auto' } : {}),
+                            transform: `rotate(${rotation}deg)`,
+                            ...(rotation % 180 !== 0 ? { width: '100vh', height: '100vw' } : {}),
+                        }
+                }
             >
-                {/* Paper Texture Overlay */}
-                <div className="absolute inset-0 opacity-[0.05] pointer-events-none z-10 mix-blend-multiply"
-                    style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.65\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")' }}
+                {/* Paper Texture */}
+                <div
+                    className="absolute inset-0 opacity-[0.05] pointer-events-none z-10 mix-blend-multiply"
+                    style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E\")" }}
                 />
 
-                {/* Inner Spine Shadow for Two Page View */}
+                {/* Spine Shadow */}
                 {isTwoPageView && (
                     <div className={`absolute inset-y-0 z-20 w-12 pointer-events-none ${isRightSide
-                        ? 'left-0 bg-gradient-to-r from-black/10 to-transparent' // Right Page: Shadow on Left Edge
-                        : 'right-0 bg-gradient-to-l from-black/10 to-transparent' // Left Page: Shadow on Right Edge
-                        }`}
-                    />
+                        ? 'left-0 bg-gradient-to-r from-black/10 to-transparent'
+                        : 'right-0 bg-gradient-to-l from-black/10 to-transparent'
+                        }`} />
                 )}
 
-                {/* Loading Placeholder */}
+                {/* Placeholder */}
                 <div className="absolute inset-0 bg-[#fffdf5] flex flex-col items-center justify-center text-stone-300">
                     <span className="text-xl font-amiri opacity-20">{pageData.surah}</span>
                 </div>
@@ -198,39 +249,38 @@ export default function BookViewer() {
                     src={pageData.imageSrc}
                     alt={`صفحة ${pageData.pageNumber}`}
                     fill
-                    className={`
-                        ${isTwoPageView
-                            ? (isRightSide ? 'object-contain object-left' : 'object-contain object-right')
-                            : (isLandscapeState ? 'object-cover object-top' : 'object-contain')
-                        }
-                    `}
+                    className={
+                        activeLandscape
+                            ? 'object-contain object-top'
+                            : isTwoPageView
+                                ? (isRightSide ? 'object-contain object-left' : 'object-contain object-right')
+                                : 'object-contain'
+                    }
                     priority
                     unoptimized
-                    sizes={isTwoPageView ? "50vw" : "100vw"}
+                    sizes={isTwoPageView ? '50vw' : '100vw'}
                     draggable={false}
                 />
 
-                {/* Bookmark Elegant Marker */}
+                {/* Bookmark */}
                 {bookmarks.includes(pageData.id) && (
                     <>
                         <motion.div
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
                             className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-[42px] h-[4px] rounded-full"
-                            style={{
-                                background: "linear-gradient(90deg, #d4af37, #fceb9e)",
-                                boxShadow: "0 2px 6px rgba(212, 175, 55, 0.5)"
-                            }}
+                            style={{ background: 'linear-gradient(90deg, #d4af37, #fceb9e)', boxShadow: '0 2px 6px rgba(212,175,55,0.5)' }}
                         />
-                        {/* Subtle golden glow overlay on the bookmarked page */}
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             className="absolute inset-0 z-10 pointer-events-none mix-blend-multiply"
-                            style={{ backgroundColor: "rgba(212, 175, 55, 0.04)" }}
+                            style={{ backgroundColor: 'rgba(212,175,55,0.04)' }}
                         />
                     </>
                 )}
+
+                {/* Notes Icon */}
                 {notes[pageData.id] && (
                     <div className="absolute top-4 left-8 sm:left-12 z-20 text-amber-600 drop-shadow-md bg-white/80 p-1.5 rounded-full border border-amber-200/50 backdrop-blur-sm">
                         <FilePenLine size={20} className="fill-amber-100" />
@@ -240,38 +290,51 @@ export default function BookViewer() {
         );
     };
 
+    // ── JSX ─────────────────────────────────────────────────────────────────
+    // Mobile landscape: ROOT is the scroll container (h-screen overflow-y-auto)
+    // Everything else: standard h-screen overflow-hidden
     return (
-        <div className="h-screen w-full bg-[#fdfbf7] relative overflow-hidden flex items-center justify-center">
-
-            {/* Preload adjacent images */}
+        <div
+            ref={scrollRef}
+            className={
+                // two-page landscape: overflow-hidden (pages fit in screen)
+                // single-page landscape: overflow-y-auto (scrollable)
+                activeLandscape && isTwoPageView
+                    ? 'h-screen w-full bg-[#fdfbf7] relative overflow-hidden flex items-center justify-center'
+                    : activeLandscape
+                        ? 'h-screen w-full bg-[#fdfbf7] overflow-y-auto'
+                        : 'h-screen w-full bg-[#fdfbf7] relative overflow-hidden flex items-center justify-center'
+            }
+        >
+            {/* Preload */}
             <div className="hidden">
                 {preloadPages.map(page => (
-                    <Image
-                        key={`preload-${page.id}`}
-                        src={page.imageSrc}
-                        alt={`preload-${page.pageNumber}`}
-                        width={100}
-                        height={100}
-                        unoptimized
-                        priority
-                    />
+                    <Image key={`preload-${page.id}`} src={page.imageSrc} alt="" width={100} height={100} unoptimized priority />
                 ))}
             </div>
 
-            <AnimatePresence initial={false} custom={direction} mode='popLayout'>
+            <AnimatePresence initial={false} custom={direction} mode="popLayout">
                 <motion.div
-                    key={`page-wrap-${currentBook}-${isTwoPageView ? rightPageNum : currentPage}`} // Unique, deterministic key
+                    key={`page-wrap-${currentBook}-${isTwoPageView ? rightPageNum : currentPage}`}
                     custom={direction}
                     variants={variants}
                     initial="enter"
                     animate="center"
                     exit="exit"
                     transition={{
-                        x: { type: "spring", stiffness: 400, damping: 25 },
-                        opacity: { duration: 0.15 }
+                        x: { type: 'spring', stiffness: 400, damping: 25 },
+                        opacity: { duration: 0.15 },
                     }}
-                    className={`absolute inset-0 flex items-center justify-center ${isZoomed ? '' : 'cursor-grab active:cursor-grabbing'}`}
-                    {...(bind() as any)}
+                    className={
+                        // two-page landscape: absolute inset-0 (fit to screen)
+                        // single-page landscape: relative w-full (scrollable)
+                        activeLandscape && isTwoPageView
+                            ? `absolute inset-0 flex items-center justify-center ${isZoomed ? '' : 'cursor-grab active:cursor-grabbing'}`
+                            : activeLandscape
+                                ? 'relative w-full flex items-start justify-center'
+                                : `absolute inset-0 flex items-center justify-center ${isZoomed ? '' : 'cursor-grab active:cursor-grabbing'}`
+                    }
+                    {...(!activeLandscape ? (bind() as any) : {})}
                     onTap={() => !isZoomed && toggleUI()}
                     style={{ touchAction: 'pan-y' }}
                 >
@@ -283,58 +346,59 @@ export default function BookViewer() {
                         wheel={{ step: 0.1, smoothStep: 0.005 }}
                         pinch={{ step: 2 }}
                         panning={{
-                            disabled: !isZoomed && !(isLandscapeState && !isTwoPageView),
-                            wheelPanning: true,
+                            // landscape: let native scroll work; portrait: library panning when zoomed
+                            disabled: activeLandscape ? true : !isZoomed,
+                            wheelPanning: !activeLandscape,
                         }}
                         limitToBounds={true}
-                        zoomAnimation={{
-                            animationType: 'easeOut',
-                            animationTime: 200
-                        }}
+                        zoomAnimation={{ animationType: 'easeOut', animationTime: 200 }}
                         doubleClick={{ disabled: false, step: 0.7, animationTime: 200 }}
                         alignmentAnimation={{ sizeX: 0, sizeY: 0, velocityAlignmentTime: 200, animationTime: 200 }}
                         onZoom={(ref) => setIsZoomed(ref.state.scale > 1.01)}
                         onTransformed={(ref) => setIsZoomed(ref.state.scale > 1.01)}
-                        onPanningStart={(ref) => {
-                            prevPosY.current = ref.state.positionY;
-                        }}
+                        onPanningStart={(ref) => { prevPosY.current = ref.state.positionY; }}
                         onPanning={(ref) => {
-                            const currentY = ref.state.positionY;
-                            const diff = currentY - prevPosY.current;
-
-                            // diff < 0 means panning content UP (scrolling down to read) -> Hide UI
-                            // diff > 0 means panning content DOWN (scrolling up) -> Show UI
+                            const diff = ref.state.positionY - prevPosY.current;
                             if (Math.abs(diff) > 3) {
-                                if (diff < 0) {
-                                    setUIVisible(false);
-                                } else {
-                                    setUIVisible(true);
-                                }
-                                prevPosY.current = currentY;
+                                setUIVisible(diff > 0);
+                                prevPosY.current = ref.state.positionY;
                             }
                         }}
                     >
-                        {({ zoomToElement, resetTransform }) => (
+                        {({ resetTransform }) => (
                             <TransformComponent
-                                wrapperClass="!w-full !h-full flex items-center justify-center"
-                                contentClass="!w-full !h-full flex items-center justify-center"
+                                wrapperClass={
+                                    activeLandscape && isTwoPageView
+                                        ? '!w-full !h-full flex items-center justify-center'
+                                        : activeLandscape
+                                            ? '!w-full'
+                                            : '!w-full !h-full flex items-center justify-center'
+                                }
+                                contentClass={
+                                    activeLandscape && isTwoPageView
+                                        ? '!w-full !h-full flex items-center justify-center'
+                                        : activeLandscape
+                                            ? '!w-full'
+                                            : '!w-full !h-full flex items-center justify-center'
+                                }
                             >
-                                <div className={`relative w-full h-full mx-auto flex items-center justify-center ${rotation !== 0 ? 'p-0' : 'p-1'} ${isTwoPageView ? 'gap-0' : ''}`} dir={isTwoPageView ? "rtl" : undefined}>
-                                    {/* In TwoPage View: [Right Page (Lower)] [Left Page (Higher)] for Correct RTL */}
-
+                                <div
+                                    className={
+                                        activeLandscape && isTwoPageView
+                                            ? 'relative w-full h-full flex flex-row items-center justify-center'
+                                            : activeLandscape
+                                                ? 'w-full'
+                                                : `relative w-full h-full mx-auto flex items-center justify-center ${(rotation !== 0 || isThoughtsPhoneLandscape) ? 'p-0' : 'p-1'} ${isTwoPageView ? 'gap-0' : ''}`
+                                    }
+                                    dir={isTwoPageView ? 'rtl' : undefined}
+                                >
                                     {isTwoPageView ? (
                                         <>
-                                            {/* RIGHT SIDE (Odd Page, Lower Number) */}
                                             {renderPage(rightPageData, true)}
-
-                                            {/* CENTER SPINE (Optional) */}
                                             <div className="hidden lg:block w-[1px] h-[95%] bg-gradient-to-b from-transparent via-stone-300 to-transparent opacity-30 z-30" />
-
-                                            {/* LEFT SIDE (Even Page, Higher Number) */}
                                             {renderPage(leftPageData, false)}
                                         </>
                                     ) : (
-                                        // Single Page View
                                         renderPage(pages.find(p => p.pageNumber === currentPage), true)
                                     )}
                                 </div>
@@ -343,9 +407,6 @@ export default function BookViewer() {
                     </TransformWrapper>
                 </motion.div>
             </AnimatePresence>
-
-            {/* Page Info Footer */}
-
-        </div >
+        </div>
     );
 }

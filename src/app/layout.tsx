@@ -36,8 +36,8 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://quran-faisalshakaki.vercel.app"),
-  title: 'مكتبتي | التفسير والخواطر',
-  description: "المصحف المفسر و صفحات الخواطر بتجربة عصرية تحاكي الورق",
+  title: 'المصحف المفسر و الخواطر',
+  description: "تطبيق تفاعلي يجمع بين تفسير القران الكريم ودفتر الخواطر",
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -45,8 +45,8 @@ export const metadata: Metadata = {
     title: 'Heritage Reader'
   },
   openGraph: {
-    title: "مكتبتي | التفسير والخواطر",
-    description: "المصحف المفسر و صفحات الخواطر بتجربة عصرية تحاكي الورق",
+    title: "المصحف المفسر و الخواطر",
+    description: "تطبيق تفاعلي يجمع بين تفسير القران الكريم ودفتر الخواطر",
     siteName: "مكتبتي",
     locale: "ar_SA",
     type: "website",
@@ -60,8 +60,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "مكتبتي | التفسير والخواطر",
-    description: "المصحف المفسر و صفحات الخواطر بتجربة عصرية تحاكي الورق",
+    title: "المصحف المفسر و الخواطر",
+    description: "تطبيق تفاعلي يجمع بين تفسير القران الكريم ودفتر الخواطر",
     images: ["/share-logo.jpg"]
   }
 };
@@ -72,7 +72,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ar" dir="rtl">
+    <html lang="ar" dir="rtl" suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#fdfbf7" />
@@ -91,6 +91,7 @@ export default function RootLayout({
       </head>
       <body
         className={`${cairo.variable} ${amiri.variable} ${reemKufi.variable} antialiased bg-[#fdfbf7] text-slate-900`}
+        suppressHydrationWarning
       >
 
         <GlobalInstallBanner />

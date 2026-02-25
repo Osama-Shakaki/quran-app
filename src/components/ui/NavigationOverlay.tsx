@@ -51,11 +51,17 @@ export default function NavigationOverlay({ onNotesClick }: NavigationOverlayPro
     const isTwoPageView = useReaderStore((state) => state.isTwoPageView);
     const setTwoPageView = useReaderStore((state) => state.setTwoPageView);
     const [isLandscape, setIsLandscape] = useState(false);
+    const [isLandscapeForToolbar, setIsLandscapeForToolbar] = useState(false);
 
-    // Detect Landscape Mode on the client
+    // Detect Mobile Landscape Mode only (not desktop)
     useEffect(() => {
         const checkLandscape = () => {
-            setIsLandscape(window.matchMedia("(orientation: landscape)").matches);
+            const isLandscapeOrientation = window.matchMedia("(orientation: landscape)").matches;
+            const isMobile = window.matchMedia("(max-width: 1023px)").matches;
+            // isLandscape: true فقط عند جوال في الوضع الأفقي (للقائمة)
+            setIsLandscape(isLandscapeOrientation && isMobile);
+            // isLandscapeForToolbar: true لأي جهاز في الوضع الأفقي (لأيقونة عرض الصفحتين)
+            setIsLandscapeForToolbar(isLandscapeOrientation);
         };
 
         checkLandscape();
@@ -247,7 +253,7 @@ export default function NavigationOverlay({ onNotesClick }: NavigationOverlayPro
                                 onSearch={() => setIsSearchOpen(true)}
                                 onMenuToggle={() => setIsMenuOpen(true)}
                                 isBookmarked={isBookmarked || false}
-                                isLandscape={isLandscape && currentBook === 'quran'}
+                                isLandscape={isLandscapeForToolbar && currentBook === 'quran'}
                                 isTwoPageView={isTwoPageView}
                                 onToggleTwoPage={() => setTwoPageView(!isTwoPageView)}
                             />
@@ -275,7 +281,7 @@ export default function NavigationOverlay({ onNotesClick }: NavigationOverlayPro
                             animate={{ x: 0 }}
                             exit={{ x: '100%' }}
                             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="fixed top-0 right-0 bottom-0 w-80 md:w-96 bg-[#fdfbf7] z-[70] shadow-2xl flex flex-col font-cairo"
+                            className="fixed top-0 right-0 bottom-0 w-80 md:w-96 bg-[#fdfbf7] z-[70] shadow-2xl flex flex-col font-cairo overflow-hidden"
                             dir="rtl"
                         >
                             {/* Drawer Header */}
@@ -348,6 +354,7 @@ export default function NavigationOverlay({ onNotesClick }: NavigationOverlayPro
                                                 <ChevronLeft size={20} className="mr-auto text-slate-400" />
                                             </Link>
 
+                                            {/* InstallPrompt يظهر فقط في Portrait (خارج منطقة التمرير) */}
                                         </motion.nav>
                                     )}
 
@@ -460,21 +467,12 @@ export default function NavigationOverlay({ onNotesClick }: NavigationOverlayPro
                                 </AnimatePresence>
                             </div>
 
-                            {/* PWA Install Area - Only show on main menu tab */}
-                            <AnimatePresence mode="wait">
-                                {activeTab === 'menu' && (
-                                    <motion.div
-                                        key="install-prompt"
-                                        initial={{ opacity: 0, x: 20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, x: -20 }}
-                                        transition={{ duration: 0.2 }}
-                                        className="px-5 pb-5 shrink-0 w-full"
-                                    >
-                                        <InstallPrompt onInstallSuccess={() => setIsMenuOpen(false)} />
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
+                            {/* PWA Install — ثابت في الأسفل في Portrait فقط */}
+                            {!isLandscape && activeTab === 'menu' && (
+                                <div className="px-5 pb-5 shrink-0 w-full">
+                                    <InstallPrompt onInstallSuccess={() => setIsMenuOpen(false)} />
+                                </div>
+                            )}
 
                             {/* Drawer Footer */}
                             <div className="py-4 border-t border-slate-200 bg-white/50 backdrop-blur-sm shrink-0">

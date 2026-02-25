@@ -44,6 +44,7 @@ export default function InstallPrompt({ onInstallSuccess, variant = 'sidebar' }:
     // Modal states
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [showIOSInstructions, setShowIOSInstructions] = useState(false);
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -104,34 +105,29 @@ export default function InstallPrompt({ onInstallSuccess, variant = 'sidebar' }:
         };
     }, []);
 
-    const handleInitialClick = async () => {
+    const handleInitialClick = () => {
+        const isIos = /ipad|iphone|ipod/.test(navigator.userAgent.toLowerCase()) && !('MSStream' in window);
         if (deferredPrompt) {
-            // Trigger the native OS prompt directly
-            await deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            console.log('User choice:', outcome);
-
-            if (outcome === 'accepted') {
-                setIsStandalone(true);
-                if (onInstallSuccess) onInstallSuccess();
-            }
-            setDeferredPrompt(null);
-            setIsModalOpen(false);
+            // إظهار مربع التأكيد أولاً
+            setShowConfirmModal(true);
+        } else if (isIos) {
+            setIsModalOpen(true);
+            setShowIOSInstructions(true);
         } else {
-            // Fallback for iOS / Unsupported browsers
-            const isIos = /ipad|iphone|ipod/.test(navigator.userAgent.toLowerCase()) && !('MSStream' in window);
-            if (isIos) {
-                // Show iOS instructions modal
-                setIsModalOpen(true);
-                setShowIOSInstructions(true);
-            } else {
-                // Android/Windows but no deferredPrompt (e.g. incognito or already installed)
-                // The user requested NOT to see the manual instructions box.
-                // We show a simple alert or just do nothing, or show the fallback if they REALLY need it, 
-                // but since they explicitly disliked the "manual install steps", we just don't open the modal.
-                console.log("Native install not available. Check if already installed or using HTTPS.");
-            }
+            console.log('Native install not available.');
         }
+    };
+
+    const handleConfirmInstall = async () => {
+        setShowConfirmModal(false);
+        if (!deferredPrompt) return;
+        await deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            setIsStandalone(true);
+            if (onInstallSuccess) onInstallSuccess();
+        }
+        setDeferredPrompt(null);
     };
 
     const handleCloseModal = () => {
@@ -198,6 +194,67 @@ export default function InstallPrompt({ onInstallSuccess, variant = 'sidebar' }:
                 </button>
             )}
 
+            {/* ── Confirm Install Modal ─────────────────────────────── */}
+            {mounted && createPortal(
+                <AnimatePresence>
+                    {showConfirmModal && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+                            dir="rtl"
+                            onClick={() => setShowConfirmModal(false)}
+                        >
+                            <motion.div
+                                initial={{ scale: 0.92, opacity: 0, y: 16 }}
+                                animate={{ scale: 1, opacity: 1, y: 0 }}
+                                exit={{ scale: 0.92, opacity: 0, y: 16 }}
+                                transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                                className="bg-white w-full max-w-[17rem] rounded-3xl shadow-2xl overflow-hidden border border-slate-100 mx-2"
+                                onClick={e => e.stopPropagation()}
+                            >
+                                <div className="flex flex-col items-center px-6 pt-8 pb-6 gap-4">
+                                    {/* Icon */}
+                                    <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-1">
+                                        <Download size={30} className="text-forest-green" strokeWidth={2} />
+                                    </div>
+
+                                    {/* Title */}
+                                    <h3 className="text-2xl font-bold text-slate-800 font-cairo text-center leading-snug">
+                                        ثبّت التطبيق
+                                    </h3>
+
+                                    {/* Description */}
+                                    <p className="text-sm text-slate-500 text-center leading-relaxed font-cairo">
+                                        هل ترغب في تثبيت تطبيق &quot;مكتبتي&quot; ليعمل كبرنامج مستقل على جهازك وبدون الحاجة للإتصال بالإنترنت؟
+                                    </p>
+
+                                    {/* Buttons */}
+                                    <div className="flex gap-3 w-full mt-1">
+                                        <button
+                                            onClick={() => setShowConfirmModal(false)}
+                                            className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold font-cairo text-sm transition-all active:scale-95 hover:bg-slate-200"
+                                        >
+                                            إلغاء
+                                        </button>
+                                        <button
+                                            onClick={handleConfirmInstall}
+                                            className="flex-1 py-3 rounded-xl text-white font-bold font-cairo text-sm transition-all active:scale-95 shadow-md"
+                                            style={{ backgroundColor: '#18382d' }}
+                                        >
+                                            تأكيد
+                                        </button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
+
+            {/* ── iOS Instructions Modal ────────────────────────────── */}
             {mounted && createPortal(
                 <AnimatePresence>
                     {isModalOpen && (
@@ -208,7 +265,6 @@ export default function InstallPrompt({ onInstallSuccess, variant = 'sidebar' }:
                             className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
                             dir="rtl"
                         >
-                            {/* Make sure we ignore clicks inside the modal content, but close on overlay click if desired */}
                             <motion.div
                                 initial={{ scale: 0.95, opacity: 0, y: 20 }}
                                 animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -226,7 +282,6 @@ export default function InstallPrompt({ onInstallSuccess, variant = 'sidebar' }:
                                                     <X size={20} />
                                                 </button>
                                             </div>
-
                                             <div className="flex flex-col gap-4 mb-8">
                                                 <div className="flex items-center gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
                                                     <div className="bg-blue-50 text-blue-500 w-12 h-12 rounded-full flex items-center justify-center shrink-0">
@@ -248,9 +303,7 @@ export default function InstallPrompt({ onInstallSuccess, variant = 'sidebar' }:
                                                 حسناً، فهمت
                                             </button>
                                         </>
-                                    ) : (
-                                        null
-                                    )}
+                                    ) : null}
                                 </div>
                             </motion.div>
                         </motion.div>
