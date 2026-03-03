@@ -37,7 +37,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL("https://quran-faisalshakaki.vercel.app"),
   title: 'المصحف المفسر و الخواطر',
-  description: "تطبيق تفاعلي يجمع بين تفسير القرآن الكريم ودفتر الخواطر\nإعداد م. فيصل شققي",
+  description: "تطبيق تفاعلي يجمع بين تفسير القرآن الكريم ودفتر الخواطر",
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "المصحف المفسر و الخواطر",
-    description: "تطبيق تفاعلي يجمع بين تفسير القرآن الكريم ودفتر الخواطر\nإعداد م. فيصل شققي",
+    description: "تطبيق تفاعلي يجمع بين تفسير القرآن الكريم ودفتر الخواطر",
     siteName: "مكتبتي",
     locale: "ar_SA",
     type: "website",
