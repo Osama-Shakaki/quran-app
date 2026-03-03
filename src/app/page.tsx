@@ -102,7 +102,7 @@ export default function Home() {
                     </div>
                     <h2 className="text-4xl md:text-5xl font-amiri mb-4 text-slate-800 group-hover:text-forest-green transition-colors">المصحف المفسر</h2>
                     <p className="text-lg text-slate-600 font-light leading-relaxed mb-8">
-                      تفسير شخصي مكتوب بخط اليد مدمج مع صفحات القرآن الكريم، لتجربة تدبر عميقة.
+                      تفسير شخصي مكتوب بخط اليد مدمج مع صفحات القرآن الكريم.
                     </p>
                   </div>
 
@@ -150,7 +150,7 @@ export default function Home() {
                     </div>
                     <h2 className="text-4xl md:text-5xl font-amiri mb-4 text-slate-800 group-hover:text-orange-800 transition-colors">دفتر الخواطر</h2>
                     <p className="text-lg text-slate-600 font-light leading-relaxed mb-8">
-                      تأملات وخواطر شخصية مدونة يدوياً في لحظات الصفاء، تشاركك رحلة الفهم.
+                      تأملات وخواطر شخصية مدونة يدوياً في لحظات الصفاء.
                     </p>
                   </div>
 

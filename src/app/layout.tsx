@@ -61,7 +61,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "المصحف المفسر و الخواطر",
-    description: "تطبيق تفاعلي يجمع بين تفسير القرآن الكريم ودفتر الخواطر\nإعداد م. فيصل شققي",
+    description: "تطبيق تفاعلي يجمع بين تفسير القرآن الكريم ودفتر الخواطر",
     images: ["/share-logo.jpg"]
   }
 };
